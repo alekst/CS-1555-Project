@@ -24,30 +24,30 @@ public class Project1 {
             case 0:
                 databaseInit();
                 break;
-            case 1:
-                selectAllRegistrations();
-                break;
-            case 2:
-                if (args.length < 2) {
-                    System.err.println("arguments needed for query 2: <query-#> <student-name>");
-                    break;
-                }
-                selectStudentRegistration(args[1]);
-                break;
-            case 3:
-                if (args.length < 3) {
-                    System.err.println("arguments needed for query 3: <query-#> <student-name> <class-id>");
-                    break;
-                }
-                insertNewRegistration(args[1], Integer.parseInt(args[2]));
-                break;
-            case 4:
-                if (args.length < 3) {
-                    System.err.println("arguments needed for query 4: <query-#> <student-name> <new-student-name>");
-                    break;
-                }
-                updateStudentName(args[1], args[2]);
-                break;
+            // case 1:
+//                 selectAllRegistrations();
+//                 break;
+//             case 2:
+//                 if (args.length < 2) {
+//                     System.err.println("arguments needed for query 2: <query-#> <student-name>");
+//                     break;
+//                 }
+//                 selectStudentRegistration(args[1]);
+//                 break;
+//             case 3:
+//                 if (args.length < 3) {
+//                     System.err.println("arguments needed for query 3: <query-#> <student-name> <class-id>");
+//                     break;
+//                 }
+//                 insertNewRegistration(args[1], Integer.parseInt(args[2]));
+//                 break;
+//             case 4:
+//                 if (args.length < 3) {
+//                     System.err.println("arguments needed for query 4: <query-#> <student-name> <new-student-name>");
+//                     break;
+//                 }
+//                 updateStudentName(args[1], args[2]);
+//                 break;
             default:
                 System.out.println("Example not found for your entry: " + example);
                 try {
@@ -78,7 +78,51 @@ public class Project1 {
         connection.close();
     }
 
- 
+	public void databaseInit() {
+	        System.out.println("Initializing database...");
+	        String startTransaction = "SET TRANSACTION READ WRITE";
+			
+	        //String dropTableClass = "drop table class cascade constraints";
+	        //String createTableClass = "create table class (" + 
+	            // "classid number(2)," +
+// 	            "max_num_students number(2)," +
+// 	            "cur_num_students number(2)," +
+// 	            "primary key(classid) )";
+// 	        String dropTableRegister = "drop table register cascade constraints";
+// 	        String createTableRegister = "create table register (" +
+// 	            "student_name varchar2(10)," +
+// 	            "classid number(2)," +
+// 	            "date_registered date," +
+// 	            "primary key(student_name, classid)," +
+// 	            "foreign key (classid) references class(classid) )";
+// 	        String insertQueryClassOne = "insert into class values(1, 2, 1)";
+// 	        String insertQueryClassTwo = "insert into class values (2,4,0)";
+// 	        String insertQueryRegister = "insert into register values ('Mary',1, '03-JAN-2012')";
+	        try {
+	            statement = connection.createStatement();
+	            statement.executeUpdate(startTransaction);
+	            // statement.executeUpdate(dropTableClass);
+// 	            statement.executeUpdate(createTableClass);
+// 	            statement.executeUpdate(dropTableRegister);
+// 	            statement.executeUpdate(createTableRegister);
+// 	            statement.executeUpdate(insertQueryClassOne);
+// 	            statement.executeUpdate(insertQueryClassTwo);
+// 	            statement.executeUpdate(insertQueryRegister);
+	            statement.executeUpdate("COMMIT");
+	        } catch(SQLException Ex) {
+	            System.out.println("Error running the sample queries.  Machine Error: " +
+	                    Ex.toString());
+	        } finally{
+	            try {
+	                if (statement != null)
+	                    statement.close();
+	                if (preparedStatement != null)
+	                    preparedStatement.close();
+	            } catch (SQLException e) {
+	                System.out.println("Cannot close Statement. Machine error: "+e.toString());
+	            }
+	        }
+	    } 
 
 
 }
