@@ -120,7 +120,28 @@ public class DBLoader
 
     private static void createTables(Connection con)
     {
-
+		System.out.println("creating tables...");
+		String startTransaction = "SET TRANSACTION READ WRITE";
+		String createwarehouses = "create table Warehouses (" +
+			"warehouse_id number(3), " + 
+			"name varchar2(20), " +
+			"address varchar2(20), " +
+			"city varchar2(20), " +
+			"state varchar2(2), " +
+			"zip number(5), " +
+			"tax_rate number (3, 2), " +
+			"sum_sales number (9, 2), " +
+			"primary key(warehouse_id) )";
+		String createStations = "create table Stations (" +
+			"station_id number(3), " +
+			"warehouse_id number(3)" +
+			"name varchar2(20), " +
+			"address varchar2(20), " +
+			"city varchar2(20), " +
+			"state varchar2(5), " +
+			"zip number(5), " +
+			"tax_rate number(3, 2), " +
+			"sum_sales(9, 2) )";
     }
 
 
