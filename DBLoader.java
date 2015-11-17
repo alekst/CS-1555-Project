@@ -74,8 +74,7 @@ public class DBLoader
         // drop and recreate the tables
         if (answer.toUpperCase().equals("Y"))
         {
-            dropTables(con);
-            createTables(con);
+			initDatabase(con);
         }
 
         // populate the tables with generated data
@@ -111,18 +110,15 @@ public class DBLoader
 
 
 
-    private static void dropTables(Connection con)
-    {
-
-    }
 
 
-
-    private static void createTables(Connection con)
+    private static void initDatabase(Connection con)
     {
 		System.out.println("creating tables...");
 		String startTransaction = "SET TRANSACTION READ WRITE";
-		String createwarehouses = "create table Warehouses (" +
+		String dropWarehouses = "drop table Warehouses cascade constraints";
+		
+		String createWarehouses = "create table Warehouses (" +
 			"warehouse_id number(3), " + 
 			"name varchar2(20), " +
 			"address varchar2(20), " +
@@ -131,7 +127,9 @@ public class DBLoader
 			"zip number(5), " +
 			"tax_rate number (3, 2), " +
 			"sum_sales number (9, 2), " +
-			"primary key(warehouse_id) )";
+			"constraint Warehouses_pk primary key(warehouse_id) )";
+		
+		String dropStations = "drop table Stations cascade constraints";
 		String createStations = "create table Stations (" +
 			"station_id number(3), " +
 			"warehouse_id number(3)" +
@@ -141,7 +139,77 @@ public class DBLoader
 			"state varchar2(5), " +
 			"zip number(5), " +
 			"tax_rate number(3, 2), " +
-			"sum_sales(9, 2) )";
+			"sum_sales(9, 2) ), " +
+			"constraint Stations_pk primary key(station_id, warehouse_id), " +
+			"constraint Stations_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
+	
+		String dropCustomers = "drop table Customers cascade constraints";
+		String createCustomers = "create table Customers (" +
+			"customer_id number(6), " +
+			"station_id number(3), " +
+			"fname varchar2(10), " +
+			"mi varchar2(1), " +
+			"lname varchar2(20), " + 
+			"address varchar2(20), " +
+			"city varchar2(20), " +
+			"state varchar2(5), " +
+			"zip number(5), " +
+			"phone varchar(13), " +
+			"join_date date, " +
+			"discount number(3, 2), " +
+			"balance number(7, 2), " +
+			"paid_amount number (7, 2), " +
+			"total_payments number (9, 2), " +
+			"total_deliveries number, " +
+			"constraint Customers_pk primary key(customer_id, station_id), " +
+			"constraint Customers_ak alternate key(phone), " +
+			"constraint Customers_fk foreign key(station_id) references Stations(station_id) )";
+		
+		String dropOrders = "drop table Orders cascade constraints";
+		String createOrders = "create table Orders (" +
+			"order_id number(10), " +
+			"customer_id number(6), " +
+			"order_date date, " +
+			"completed number(1), " +
+			"items varchar2(25), " +
+			"station_id number(3), " +
+			"warehouse_id number(3)," +
+			"constraint Orders_pk primary key(customer_id, order_id), " +
+			"constraint Orders_fk1 foreign key(station_id) references Stations(station_id), " +
+			"constraint Orders_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
+		
+		String dropLineItems = "drop table LineItems cascade constraints";
+		String createLineItems = "create table LineItems (" +
+			"item_id number(15), " +
+			"order_id number(10), " +
+			"item_number number(2), " +
+			"quantity number(5), " +
+			"amount number (5, 2), " +
+			"delivered number(1), " +
+			"constraint LineItems_pk primary key(item_id, order_id), " +
+			"constraint LineItems_fk foreign key(order_id) references Orders(order_id) )";
+		
+		String dropStockItems = "drop table StockItems cascade constraints";
+		String createStockItems = "create table StockItems (" +
+			"item_id number(15), " +
+			"name varchar2(20), " +
+			"price number(5, 2), " +
+			"in_stock number(1), " +
+			"sold_this_year number(4), " +
+			"included_in_orders number(4), " +
+			"warehouse_id number(3)" +
+			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
+			"constraint StockItems_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
+		
+		try {
+			statement = conn.createStatement();
+			statement.executeUpdate(startTransaction);
+			statement.executeUpdate(dropWarehouses);
+			statement.executeUpdate(createWarehouses);
+			
+		} catch(SQLException Ex) {
+			System.out.println("Error running create queries. " + Ex.toString());
+		} 
     }
 
 
