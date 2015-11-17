@@ -26,11 +26,11 @@ public class DBLoader
 	
 	private static Connection con;
 	
-    private static String username;
-    private static String password;
+	private static String username;
+	private static String password;
 
     // address of the server
-    private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
+	private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
 	
 	public DBLoader(String answer) {
       	  // drop and recreate the tables
