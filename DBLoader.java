@@ -20,12 +20,30 @@ import java.io.IOException;
 
 public class DBLoader
 {
+	private Statement statement;
+	
+	private PreparedStatement preparedStatement;
+	
+	private static Connection con;
+	
     private static String username;
     private static String password;
 
     // address of the server
     private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
+	
+	public DBLoader(String answer) {
+        // drop and recreate the tables
+        if (answer.toUpperCase().equals("Y"))
+        {
+			initDatabase();
+        }
 
+        // populate the tables with generated data
+        populateTables();
+		
+		
+	}
 
     /**
     * Main method
@@ -33,8 +51,12 @@ public class DBLoader
     * The credential file should have the username and password to the database
     * on the first and second lines of the file, respectively.
     */
-    public static void main(String[] args)
+		
+		
+	
+    public static void main(String[] args) throws SQLException
     {
+		System.out.println(args[0]);
         // check the number of arguments
         if (args.length < 1)
         {
@@ -62,25 +84,17 @@ public class DBLoader
         infile.close();
 
         // open the connection to the server
-        Connection con = openConnection();
-
+        con = openConnection();
+		
         // ask whether the user wants to drop the tables or not
         Scanner scan = new Scanner(System.in);
         System.out.print("\nDo you want to drop and recreate the tables in the database? (y/n): ");
         String answer = scan.nextLine();
-
-
-
-        // drop and recreate the tables
-        if (answer.toUpperCase().equals("Y"))
-        {
-			initDatabase(con);
-        }
-
-        // populate the tables with generated data
-        populateTables(con);
+		
+		DBLoader loader = new DBLoader(answer);
 
         scan.close();
+		con.close();
     }
 
 
@@ -89,7 +103,7 @@ public class DBLoader
     * Opens a connection to the database server
     * @return Connection object representing the open connection
     */
-    private static Connection openConnection()
+    private static Connection openConnection() 
     {
         Connection connection = null;
         try
@@ -110,9 +124,7 @@ public class DBLoader
 
 
 
-
-
-    private static void initDatabase(Connection con)
+    public void initDatabase()
     {
 		System.out.println("creating tables...");
 		String startTransaction = "SET TRANSACTION READ WRITE";
@@ -202,7 +214,7 @@ public class DBLoader
 			"constraint StockItems_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 		
 		try {
-			statement = conn.createStatement();
+			statement = con.createStatement();
 			statement.executeUpdate(startTransaction);
 			statement.executeUpdate(dropWarehouses);
 			statement.executeUpdate(createWarehouses);
@@ -214,7 +226,7 @@ public class DBLoader
 
 
 
-    private static void populateTables(Connection con)
+    private static void populateTables()
     {
 
     }

@@ -1,4 +1,6 @@
 import java.sql.*;
+import java.util.Properties;
+import java.io.*;
 import java.text.ParseException;
 import java.sql.Date;
 
@@ -7,6 +9,18 @@ import java.sql.Date;
  * $> javac Project1
  * 
  */
+/*
+TODO: 1. set up password authentication for the db on a file not part of git
+2. Connect to the database
+
+
+
+*/
+
+
+
+
+
 public class Project1 {
 
     private static Connection connection;
@@ -61,8 +75,19 @@ public class Project1 {
     }
 
     public static void main(String args[]) throws SQLException, ClassNotFoundException {
-        String username = "username";
-        String password = "password";
+		
+		Properties properties = new Properties(); // using Properties class for username and password
+		try {
+		properties.load(new FileInputStream(new File("credentials.properties")));
+		} catch(Exception e) {
+			System.out.println("Error reading the credentials file");
+		}
+		
+        String username = properties.getProperty("username");
+        String password = properties.getProperty("password");
+		
+		System.out.println(username);
+		System.out.println(password);
 
         DriverManager.registerDriver(new oracle.jdbc.OracleDriver());
         //Class.forName("oracle.jdbc.OracleDriver");
@@ -74,7 +99,7 @@ public class Project1 {
         }
         connection = DriverManager.getConnection(url, username, password);
         Project1 demo = new Project1(Integer.parseInt(args[0]), args);
-
+		System.out.println("Test");
         connection.close();
     }
 
