@@ -217,6 +217,17 @@ public class DBLoader
 			statement.executeUpdate(startTransaction);
 			statement.executeUpdate(dropWarehouses);
 			statement.executeUpdate(createWarehouses);
+			statement.executeUpdate(dropSations);
+			statement.executeUpdate(createStations);
+			statement.executeUpdate(dropCustomers);
+			statement.executeUpdate(createCustomers);
+			statement.executeUpdate(dropOrders);
+			statement.executeUpdate(createOrders);
+			statement.executeUpdate(dropLineItems);
+			statement.executeUpdate(createLineItems);
+			statement.executeUpdate(dropStockItems);
+			statement.executeUpdate(createStockItems);
+			statement.executeUpdate("COMMIT");
 			
 		} catch(SQLException Ex) {
 			System.out.println("Error running create queries. " + Ex.toString());
