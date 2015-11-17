@@ -33,17 +33,16 @@ public class DBLoader
     private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
 	
 	public DBLoader(String answer) {
-        // drop and recreate the tables
-        if (answer.toUpperCase().equals("Y"))
-        {
-			initDatabase();
-        }
+      	  // drop and recreate the tables
+        	if (answer.toUpperCase().equals("Y"))
+        	{
+				initDatabase();
+        	}
 
-        // populate the tables with generated data
-        populateTables();
+        	// populate the tables with generated data
+        	populateTables();
 		
-		
-	}
+		}
 
     /**
     * Main method
