@@ -24,7 +24,6 @@ import java.util.Random;
 public class DBLoader
 {
 	private Statement statement;
-<<<<<<< HEAD
 	private PreparedStatement preparedStatement;
 	private Connection con;
     private String server;
@@ -40,52 +39,15 @@ public class DBLoader
 
     // address of the server
 	private final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
-=======
-	
-	private PreparedStatement preparedStatement;
-	
-	private static Connection con;
-	
-	private static String username;
-	private static String password;
-
-    // address of the server
-	private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
-	
-	public DBLoader(String answer) {
-      	  // drop and recreate the tables
-        	if (answer.toUpperCase().equals("Y"))
-        	{
-				initDatabase();
-        	}
-
-        	// populate the tables with generated data
-        	populateTables();
-		
-		}
->>>>>>> origin/master
 
     /**
     * Main method
     */
-		
-		
-	
-    public static void main(String[] args) throws SQLException
+    public static void main(String[] args)
     {
-<<<<<<< HEAD
         new DBLoader();
     }
 	
-=======
-		System.out.println(args[0]);
-        // check the number of arguments
-        if (args.length < 1)
-        {
-            System.out.println("Usage: java DBLoader [credential file]");
-            System.exit(0);
-        }
->>>>>>> origin/master
 
     /**
     * Constructor for the DBLoader. Opens the database connection with the
@@ -127,20 +89,13 @@ public class DBLoader
         System.out.print("Password for " + username + ": ");
         char[] pwd = console.readPassword();
 
-<<<<<<< HEAD
         password = new String(pwd);
 
         // open the connection to the server
         con = openConnection();
         
-=======
-        // open the connection to the server
-        con = openConnection();
-		
->>>>>>> origin/master
         // ask whether the user wants to drop the tables or not
         System.out.print("\nDo you want to drop and recreate the tables in the database? (y/n): ");
-<<<<<<< HEAD
         answer = scan.nextLine();
 
       	// drop and recreate the tables
@@ -162,15 +117,6 @@ public class DBLoader
             System.out.println("Error closing connection.");
         }
 	}
-=======
-        String answer = scan.nextLine();
-		
-		DBLoader loader = new DBLoader(answer);
-
-        scan.close();
-		con.close();
-    }
->>>>>>> origin/master
 
 
 
@@ -178,11 +124,7 @@ public class DBLoader
     * Opens a connection to the database server
     * @return Connection object representing the open connection
     */
-<<<<<<< HEAD
     private Connection openConnection() 
-=======
-    private static Connection openConnection() 
->>>>>>> origin/master
     {
         Connection connection = null;
         try
@@ -207,13 +149,9 @@ public class DBLoader
     {
 		System.out.println("creating tables...");
 		String startTransaction = "SET TRANSACTION READ WRITE";
-<<<<<<< HEAD
         String[] dropStatements = new String[6];
 
 		dropStatements[0] = "drop table Warehouses cascade constraints";
-=======
-		String dropWarehouses = "drop table Warehouses cascade constraints";
->>>>>>> origin/master
 		
 		String createWarehouses = "create table Warehouses (" +
 			"warehouse_id number(3), " + 
@@ -221,31 +159,19 @@ public class DBLoader
 			"address varchar2(20), " +
 			"city varchar2(20), " +
 			"state varchar2(2), " +
-<<<<<<< HEAD
 			"zip varchar2(5), " +
-=======
-			"zip number(5), " +
->>>>>>> origin/master
 			"tax_rate number (3, 2), " +
 			"sum_sales number (9, 2), " +
 			"constraint Warehouses_pk primary key(warehouse_id) )";
 		
-<<<<<<< HEAD
 		dropStatements[1] = "drop table Stations cascade constraints";
 		String createStations = "create table Stations (" +
 			"station_id number(3), " +
 			"warehouse_id number(3), " +
-=======
-		String dropStations = "drop table Stations cascade constraints";
-		String createStations = "create table Stations (" +
-			"station_id number(3), " +
-			"warehouse_id number(3)" +
->>>>>>> origin/master
 			"name varchar2(20), " +
 			"address varchar2(20), " +
 			"city varchar2(20), " +
 			"state varchar2(5), " +
-<<<<<<< HEAD
 			"zip varchar2(5), " +
 			"tax_rate number(3, 2), " +
 			"sum_sales number(9, 2), " +
@@ -253,15 +179,6 @@ public class DBLoader
 			"constraint Stations_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 	
 		dropStatements[2] = "drop table Customers cascade constraints";
-=======
-			"zip number(5), " +
-			"tax_rate number(3, 2), " +
-			"sum_sales(9, 2) ), " +
-			"constraint Stations_pk primary key(station_id, warehouse_id), " +
-			"constraint Stations_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
-	
-		String dropCustomers = "drop table Customers cascade constraints";
->>>>>>> origin/master
 		String createCustomers = "create table Customers (" +
 			"customer_id number(6), " +
 			"station_id number(3), " +
@@ -271,38 +188,24 @@ public class DBLoader
 			"address varchar2(20), " +
 			"city varchar2(20), " +
 			"state varchar2(5), " +
-<<<<<<< HEAD
 			"zip varchar2(5), " +
 			"phone varchar2(13), " +
-=======
-			"zip number(5), " +
-			"phone varchar(13), " +
->>>>>>> origin/master
 			"join_date date, " +
 			"discount number(3, 2), " +
 			"balance number(7, 2), " +
 			"paid_amount number (7, 2), " +
 			"total_payments number (9, 2), " +
-<<<<<<< HEAD
 			"total_deliveries number (10), " +
-=======
-			"total_deliveries number, " +
->>>>>>> origin/master
 			"constraint Customers_pk primary key(customer_id, station_id), " +
 			"constraint Customers_ak alternate key(phone), " +
 			"constraint Customers_fk foreign key(station_id) references Stations(station_id) )";
 		
-<<<<<<< HEAD
 		dropStatements[3] = "drop table Orders cascade constraints";
-=======
-		String dropOrders = "drop table Orders cascade constraints";
->>>>>>> origin/master
 		String createOrders = "create table Orders (" +
 			"order_id number(10), " +
 			"customer_id number(6), " +
 			"order_date date, " +
 			"completed number(1), " +
-<<<<<<< HEAD
 			"line_item_count number(10), " +
 			"station_id number(3), " +
 			"warehouse_id number(3), " +
@@ -312,16 +215,6 @@ public class DBLoader
             "constraint Orders_fk3 foreign key(customer_id) references Customers(customer_id) )";
 		
 		dropStatements[4] = "drop table LineItems cascade constraints";
-=======
-			"items varchar2(25), " +
-			"station_id number(3), " +
-			"warehouse_id number(3)," +
-			"constraint Orders_pk primary key(customer_id, order_id), " +
-			"constraint Orders_fk1 foreign key(station_id) references Stations(station_id), " +
-			"constraint Orders_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
-		
-		String dropLineItems = "drop table LineItems cascade constraints";
->>>>>>> origin/master
 		String createLineItems = "create table LineItems (" +
 			"item_id number(15), " +
 			"order_id number(10), " +
@@ -332,11 +225,7 @@ public class DBLoader
 			"constraint LineItems_pk primary key(item_id, order_id), " +
 			"constraint LineItems_fk foreign key(order_id) references Orders(order_id) )";
 		
-<<<<<<< HEAD
 		dropStatements[5] = "drop table StockItems cascade constraints";
-=======
-		String dropStockItems = "drop table StockItems cascade constraints";
->>>>>>> origin/master
 		String createStockItems = "create table StockItems (" +
 			"item_id number(15), " +
 			"name varchar2(20), " +
@@ -344,7 +233,6 @@ public class DBLoader
 			"in_stock number(1), " +
 			"sold_this_year number(4), " +
 			"included_in_orders number(4), " +
-<<<<<<< HEAD
 			"warehouse_id number(3), " +
 			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
 			"constraint StockItems_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
@@ -394,32 +282,10 @@ public class DBLoader
             System.out.println("StockItems");
 			statement.executeUpdate(createLineItems);
             System.out.println("LineItems");
-=======
-			"warehouse_id number(3)" +
-			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
-			"constraint StockItems_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
-		
-		try {
-			statement = con.createStatement();
-			statement.executeUpdate(startTransaction);
-			statement.executeUpdate(dropWarehouses);
-			statement.executeUpdate(createWarehouses);
-			statement.executeUpdate(dropSations);
-			statement.executeUpdate(createStations);
-			statement.executeUpdate(dropCustomers);
-			statement.executeUpdate(createCustomers);
-			statement.executeUpdate(dropOrders);
-			statement.executeUpdate(createOrders);
-			statement.executeUpdate(dropLineItems);
-			statement.executeUpdate(createLineItems);
-			statement.executeUpdate(dropStockItems);
-			statement.executeUpdate(createStockItems);
->>>>>>> origin/master
 			statement.executeUpdate("COMMIT");
 			
 		} catch(SQLException Ex) {
 			System.out.println("Error running create queries. " + Ex.toString());
-<<<<<<< HEAD
 		}
 
         System.out.println("Tables successfully created.");
@@ -529,9 +395,6 @@ public class DBLoader
     private String getStreetSuffix(Random rand)
     {
         return STREET_SUFFIXES[rand.nextInt(STREET_SUFFIXES.length)];
-=======
-		} 
->>>>>>> origin/master
     }
 
     /**
@@ -550,16 +413,12 @@ public class DBLoader
         return sb.toString();
     }
 
-<<<<<<< HEAD
     /**
     * Returns a random zip code
     * @param rand Random number generator object
     * @return String containing the zip code
     */
     private String getZip(Random rand)
-=======
-    private static void populateTables()
->>>>>>> origin/master
     {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 5; i++)
