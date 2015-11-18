@@ -37,19 +37,14 @@ public class DBLoader
     private final int NAME_MIN = 4;
     private final int NAME_MAX = 15;
 
-
     // address of the server
 	private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
 	
     /**
     * Main method
     */
-		
-		
-	
-    public static void main(String[] args) throws SQLException
+    public static void main(String[] args)
     {
-
         new DBLoader();
     }
 	
@@ -98,7 +93,6 @@ public class DBLoader
 
         // open the connection to the server
         con = openConnection();
-       
 		
         // ask whether the user wants to drop the tables or not
         System.out.print("\nDo you want to drop and recreate the tables in the database? (y/n): ");
@@ -184,6 +178,7 @@ public class DBLoader
 	
 		dropStatements[2] = "drop table Customers cascade constraints";
 
+
 		String createCustomers = "create table Customers (" +
 			"customer_id number(6), " +
 			"station_id number(3), " +
@@ -204,7 +199,6 @@ public class DBLoader
 			"constraint Customers_pk primary key(customer_id, station_id), " +
 			"constraint Customers_fk foreign key(station_id) references Stations(station_id) )";
 		
-
 		dropStatements[3] = "drop table Orders cascade constraints";
 		String createOrders = "create table Orders (" +
 			"order_id number(10), " +
@@ -229,7 +223,7 @@ public class DBLoader
 			"delivered number(1), " +
 			"constraint LineItems_pk primary key(item_id, order_id), " +
 			"constraint LineItems_fk foreign key(order_id) references Orders(order_id) )";
-		
+
 
 		dropStatements[5] = "drop table StockItems cascade constraints";
 
@@ -405,8 +399,8 @@ public class DBLoader
     private String getStreetSuffix(Random rand)
     {
         return STREET_SUFFIXES[rand.nextInt(STREET_SUFFIXES.length)];
-	} 
 
+	} 
 
     /**
     * Returns a random state abbreviation
