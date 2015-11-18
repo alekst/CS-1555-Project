@@ -152,7 +152,7 @@ public class DBLoader
 		dropStatements[0] = "drop table Warehouses cascade constraints";
 		
 		String createWarehouses = "create table Warehouses (" +
-			"warehouse_id number(3), " + 
+			"warehouse_id number(3) not null, " + 
 			"name varchar2(20), " +
 			"address varchar2(20), " +
 			"city varchar2(20), " +
@@ -164,8 +164,8 @@ public class DBLoader
 		
 		dropStatements[1] = "drop table Stations cascade constraints";
 		String createStations = "create table Stations (" +
-			"station_id number(3), " +
-			"warehouse_id number(3), " +
+			"station_id number(3) not null, " +
+			"warehouse_id number(3) not null, " +
 			"name varchar2(20), " +
 			"address varchar2(20), " +
 			"city varchar2(20), " +
@@ -180,8 +180,8 @@ public class DBLoader
 
 
 		String createCustomers = "create table Customers (" +
-			"customer_id number(6), " +
-			"station_id number(3), " +
+			"customer_id number(6) not null, " +
+			"station_id number(3) not null, " +
 			"fname varchar2(10), " +
 			"mi varchar2(1), " +
 			"lname varchar2(20), " + 
