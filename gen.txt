@@ -1,0 +1,17 @@
+/******************************
+* gen.txt
+*
+* Aleks Tapinsh
+* alt99@pitt.edu
+* Clint Wadley
+* cvw5@pitt.edu
+*
+* 11/18/15
+* CS1555
+* Term Project
+*
+* Description of the approach to generating data for the database
+*/
+
+People, item, warehouse, station, and street names - generate random letter count between 4 and 15,
+then generate random letters of that count.
