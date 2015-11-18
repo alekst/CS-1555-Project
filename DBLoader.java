@@ -173,7 +173,7 @@ public class DBLoader
 			"zip varchar2(5), " +
 			"tax_rate number(3, 2), " +
 			"sum_sales number(9, 2), " +
-			"constraint Stations_pk primary key(station_id, warehouse_id), " +
+			"constraint Stations_pk primary key(station_id), " +
 			"constraint Stations_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 	
 		dropStatements[2] = "drop table Customers cascade constraints";
@@ -196,7 +196,7 @@ public class DBLoader
 			"paid_amount number(7, 2), " +
 			"total_payments number(9, 2), " +
 			"total_deliveries number(10), " +
-			"constraint Customers_pk primary key(customer_id, station_id), " +
+			"constraint Customers_pk primary key(customer_id), " +
 			"constraint Customers_fk foreign key(station_id) references Stations(station_id) )";
 		
 		dropStatements[3] = "drop table Orders cascade constraints";
@@ -208,7 +208,7 @@ public class DBLoader
 			"line_item_count number(10), " +
 			"station_id number(3), " +
 			"warehouse_id number(3), " +
-			"constraint Orders_pk primary key(customer_id, order_id), " +
+			"constraint Orders_pk primary key(order_id), " +
 			"constraint Orders_fk1 foreign key(station_id) references Stations(station_id), " +
 			"constraint Orders_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id), " +
             "constraint Orders_fk3 foreign key(customer_id) references Customers(customer_id) )";
@@ -221,7 +221,7 @@ public class DBLoader
 			"quantity number(5), " +
 			"amount number (5, 2), " +
 			"delivered number(1), " +
-			"constraint LineItems_pk primary key(item_id, order_id), " +
+			"constraint LineItems_pk primary key(item_id), " +
 			"constraint LineItems_fk foreign key(order_id) references Orders(order_id) )";
 
 
