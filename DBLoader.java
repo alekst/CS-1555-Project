@@ -6,7 +6,7 @@
 * Clint Wadley
 * cvw5@pitt.edu
 *
-* 11/12/15
+* 11/18/15
 * CS1555
 * Term Project
 *
@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.IOError;
 import java.io.Console;
 import java.util.Random;
+import java.util.HashMap;
 
 public class DBLoader
 {
@@ -32,10 +33,12 @@ public class DBLoader
     private Scanner scan;
     private final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private final String NUMBERS = "0123456789";
+    private final float[] TAXES = {0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15};
     private final String[] STREET_SUFFIXES = {"St.", "Ave.", "Rd.", "Way"};
     private final int MAX_ADDRESS = 2000;
     private final int NAME_MIN = 4;
     private final int NAME_MAX = 15;
+    private final int MAX_SOLD = 15000;
 
     // address of the server
 	private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
@@ -204,7 +207,7 @@ public class DBLoader
 			"order_id number(10), " +
 			"customer_id number(6), " +
 			"order_date date, " +
-			"completed number(1), " +
+			"completed boolean, " +
 			"line_item_count number(10), " +
 			"station_id number(3), " +
 			"warehouse_id number(3), " +
@@ -215,14 +218,15 @@ public class DBLoader
 		
 		dropStatements[4] = "drop table LineItems cascade constraints";
 		String createLineItems = "create table LineItems (" +
-			"item_id number(15), " +
+			"line_id number(15), " +
 			"order_id number(10), " +
-			"item_number number(2), " +
+			"item_id number(15), " +
 			"quantity number(5), " +
 			"amount number (5, 2), " +
-			"delivered number(1), " +
-			"constraint LineItems_pk primary key(item_id), " +
-			"constraint LineItems_fk foreign key(order_id) references Orders(order_id) )";
+			"delivered boolean, " +
+			"constraint LineItems_pk primary key(line_id), " +
+			"constraint LineItems_fk1 foreign key(order_id) references Orders(order_id), " +
+            "constraint LineItems_fk2 foreign key(item_id) references StockItems(item_id) )";
 
 
 		dropStatements[5] = "drop table StockItems cascade constraints";
@@ -232,7 +236,7 @@ public class DBLoader
 			"name varchar2(20), " +
 			"price number(5, 2), " +
 			"in_stock number(1), " +
-			"sold_this_year number(4), " +
+			"sold_this_year number(10), " +
 			"included_in_orders number(4), " +
 			"warehouse_id number(3), " +
 			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
@@ -296,7 +300,7 @@ public class DBLoader
     }
 
 
-/*
+
     private void populateTables()
     {
         String warehouses = 0;
@@ -324,7 +328,7 @@ public class DBLoader
         + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String ordersString = "insert into Orders (order_id, customer_id, order_date, completed, line_item_count, station_id, warehouse_id)"
         + "values (?, ?, ?, ?, ?, ?, ?)";
-        String lineItemsString = "insert into LineItems (item_id, order_id, item_number, quantity, amount, delivered)"
+        String lineItemsString = "insert into LineItems (line_id, order_id, item_id, quantity, amount, delivered)"
         + "values (?, ?, ?, ?, ?, ?)";
         String stockItemsString = "insert into StockItems (item_id, name, price, in_stock, sold_this_year, included_in_orders, warehouse_id)"
         + "values (?, ?, ?, ?, ?, ?, ?)";
@@ -336,29 +340,124 @@ public class DBLoader
         PreparedStatement insertOrders = con.prepareStatement(ordersString);
         PreparedStatement insertLineItems = con.prepareStatement(lineItemsString);
         PreparedStatement insertStockItems = con.prepareStatement(stockItemsString);
-        */
 
 
         /********
         * Generate the data
         *********/
-        /*
         Random rand = new Random(System.nanoTime());
+        float warehouseTotal = 0;
+        float stationTotal = 0;
+        float customerTotal = 0;
+        HashMap<Integer, Integer> ytdSoldCounts = new HashMap<Integer, Integer>();
+        HashMap<Integer, Integer> itemOrderCounts = new HashMap<Integer, Integer>();
         try
         {
             // generate the warehouses
             for (int i = 1; i <= warehouses; i++)
             {
-                insertWareHouses.setString();
+                insertWarehouses.setString(1, i);
+                insertWarehouses.setString(2, getName(rand));
+                insertWarehouses.setString(3, getAddress(rand));
+                insertWarehouses.setString(4, getName(rand));
+                insertWarehouses.setString(5, getState(rand));
+                insertWarehouses.setString(6, getZip(rand));
+                insertWarehouses.setString(7, getTax(rand));
+                insertWarehouses.setString(8, "0");
+                insertWarehouses.addBatch();
+
+                // generate the stock items
+                for (int j = 1; j <= items; j++)
+                {
+                    ytdSoldCounts.put(j, 0);
+                    itemOrderCounts.put(j, 0);
+                    insertStockItems.setString(1, j);
+                    insertStockItems.setString(2, getName());
+                    insertStockItems.setString(3, getPrice());
+                    insertStockItems.setString(4, Math.round(rand.nextFloat()));
+                    insertStockItems.setString(5, "0");
+                    insertStockItems.setString(6, "0");
+                    insertStockItems.setString(7, i);
+                    insertStockItems.addBatch();
+                }
+
+                // generate the stations
+                for (int j = 1; j <= stations; j++)
+                {
+                    insertStations.setString(1, j);
+                    insertStations.setString(2, i);
+                    insertStations.setString(3, getName(rand));
+                    insertStations.setString(4, getAddress(rand));
+                    insertStations.setString(5, getName(rand));
+                    insertStations.setString(6, getState(rand));
+                    insertStations.setString(7, getZip(rand));
+                    insertStations.setString(8, getTax(rand));
+                    insertStations.setString(9, "0");
+                    insertStations.addBatch();
+
+                    // generate the customers
+                    for (int k = 1; k <= customers; k++)
+                    {
+                        insertCustomers.setString(1, k);
+                        insertCustomers.setString(2, j);
+                        insertCustomers.setString(3, getName(rand));
+                        insertCustomers.setString(4, new String(ALPHABET.charAt(rand.nextInt(ALPHABET.length()))));
+                        insertCustomers.setString(5, getName(rand));
+                        insertCustomers.setString(6, getAddress());
+                        insertCustomers.setString(7, getName());
+                        insertCustomers.setString(8, getState());
+                        insertCustomers.setString(9, getZip());
+                        insertCustomers.setString(10, getPhone());
+                        insertCustomers.setString(11, getDate());
+                        insertCustomers.setString(12, getDiscount());
+                        insertCustomers.setString(13, balance);
+                        insertCustomers.setString(14, paidamount);
+                        insertCustomers.setString(15, totalpayments);
+                        insertCustomers.setString(16, totaldeliveries);
+                        insertCustomers.addBatch();
+
+                        // generate the orders
+                        for (int l = 1; l <= orders; l++)
+                        {
+                            int lineCount = rand.nextInt(15) + 1;
+                            Date theDate = getDate();
+                            insertOrders.setInt(1, l);
+                            insertOrders.setInt(2, k);
+                            insertOrders.setDate(3, theDate);
+                            insertOrders.setBoolean(4, rand.nextBoolean());
+                            insertOrders.setString(5, lineCount);
+                            insertOrders.setInt(6, j);
+                            insertOrders.setInt(7, i);
+                            insertOrders.addBatch();
+
+                            // generate the line items for the order
+                            for (int m = 1; m <= lineCount; m++)
+                            {
+                                int itemID = rand.nextInt(items) + 1;
+                                int itemCount = rand.nextInt(10) + 1;
+
+                                // update the hashmaps to reflect the sold and order numbers
+                                ytdSoldCounts.put(itemID, new Integer(ytdSoldCounts.get(itemID).intValue() + itemCount));
+                                insertLineItems.setInt(1, m);
+                                insertLineItems.setInt(2, l);
+                                insertLineItems.setInt(3, itemID);
+                                insertLineItems.setInt(4, itemCount);
+                                insertLineItems.setFloat(5, amount);
+                                insertLineItems.setBoolean(6, rand.nextBoolean());
+                                insertLineItems.addBatch();
+                            }
+
+                        }
+                    }
+                }
 
             }
         }
         catch (SQLException e)
         {
-            System.out.println("Error inserting data");
+            System.out.println("Error generating statements");
         }
     }
-    */
 
     /**
     * Generates and returns a random alphanumeric name of length between
@@ -400,7 +499,17 @@ public class DBLoader
     {
         return STREET_SUFFIXES[rand.nextInt(STREET_SUFFIXES.length)];
 
-	} 
+	}
+
+    /**
+    * Returns a full address, concatenated together.
+    * @param rand Random number generator object
+    * @return String containing the address
+    */
+    private String getAddress(Random rand)
+    {
+        return getStreetNum(rand) + " " + getName(rand) + " " + getStreetSuffix(rand);
+    }
 
     /**
     * Returns a random state abbreviation
@@ -432,6 +541,63 @@ public class DBLoader
         }
 
         return sb.toString();
+    }
+
+    /**
+    * Returns a random tax rate
+    * @param rand Random number generator object
+    * @return String containing the tax rate
+    */
+    private String getTax(Random rand)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(TAXES[rand.nextInt(TAXES.length)]);
+
+        return sb.subString(0, 4);
+    }
+
+    /**
+    * Returns a random phone number
+    * @param rand Random number generator object
+    * @return String containing the phone number
+    */
+    private String getPhone(Random rand)
+    {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10; i++)
+        {
+            sb.append(rand.nextInt(10));
+        }
+
+        return sb.toString();
+    }
+
+    /**
+    * Returns a random date
+    * @param rand Random number generator object
+    * @return Date object containing the date
+    */
+    private Date getDate(Random rand)
+    {
+        int year = 2010 + rand.nextInt(6);
+        int month = rand.nextInt(12) + 1;
+        int day = rand.nextInt(28) + 1;
+        return new Date(year, month, day);
+    }
+
+    /**
+    * Returns a random discount
+    * @param rand Random number generator object
+    * @return String containing the discount
+    */
+    private String getDiscount(Random rand)
+    {
+        int intPortion = rand.nextInt(75);
+        float floatPortion = rand.nextFloat();
+        StringBuilder sb = new StringBuilder();
+        sb.append((float)intPortion + floatPortion);
+        return sb.toString();
+
     }
 
 }
