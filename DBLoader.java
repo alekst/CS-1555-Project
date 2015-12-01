@@ -42,6 +42,19 @@ public class DBLoader
     private final int MAX_SOLD = 15000;
     private final int MAX_PRICE = 50;
 
+    // constants defining the amount of data to generate
+    private final int WAREHOUSES = 1;
+    private final int STATIONS_PER_WAREHOUSE = 8;
+    private final int CUSTOMERS_PER_STATION = 3000;
+    private final int ITEMS = 10000;
+    private final int MAX_ORDERS_PER_CUSTOMER = 100;
+    private final int MIN_LINE_ITEMS_PER_ORDER = 5;
+    private final int MAX_LINE_ITEMS_PER_ORDER = 15;
+    private final int AVE_ITEMS_IN_STOCK_PER_WAREHOUSE = 100;
+    private final int MIN_ITEMS_IN_STOCK_PER_WAREHOUSE = 1;
+    private final int MAX_ITEMA_IN_STOCK_PER_WAREHOUSE = 200;
+    
+
     // address of the server
 	private static final String SERVER_ADDR = "jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass";
 	
@@ -152,7 +165,7 @@ public class DBLoader
     {
 		System.out.println("creating tables...");
 		String startTransaction = "SET TRANSACTION READ WRITE";
-        String[] dropStatements = new String[6];
+        String[] dropStatements = new String[7];
 
 		dropStatements[0] = "drop table Warehouses cascade constraints";
 		
@@ -230,28 +243,28 @@ public class DBLoader
 			"item_id number(15), " +
 			"quantity number(5), " +
 			"amount number (5, 2), " +
-			"delivered number(1), " +
+			"delivery_date varchar2(10), " +
 			"constraint LineItems_pk primary key(line_id, order_id, customer_id, station_id, warehouse_id), " +
 			"constraint LineItems_fk1 foreign key(order_id, customer_id, station_id, warehouse_id) references Orders(order_id, customer_id, station_id, warehouse_id), " +
             "constraint LineItems_fk2 foreign key(item_id, warehouse_id) references StockItems(item_id, warehouse_id) )";
 
+        dropStatements[5] = "drop table Items cascade constraints";
+        String createItems = "create table Items (" +
+            "item_id number(15) unique not null, " +
+            "name varchar2(20), " +
+            "price number(5, 2)," +
+            "constraint Items_pk primary key(item_id) )";
 
-		dropStatements[5] = "drop table StockItems cascade constraints";
+		dropStatements[6] = "drop table StockItems cascade constraints";
 		String createStockItems = "create table StockItems (" +
 			"item_id number(15) not null, " +
             "warehouse_id number(3), " +
-			"name varchar2(20), " +
-			"price number(5, 2), " +
 			"in_stock number(20), " +
 			"sold_this_year number(10), " +
 			"included_in_orders number(4), " +
 			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
-			"constraint StockItems_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
-
- 	  // System.out.println(
-		   
-		  //createWarehouses + "\n" + createStations + "\n" + 
-	   //createCustomers + "\n" + createOrders + "\n" + createLineItems + "\n" + createStockItems);
+            "constraint StockItems_fk1 foreign key(item_id) references Items(item_id), " +
+			"constraint StockItems_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 
         try
         {
@@ -292,6 +305,8 @@ public class DBLoader
             System.out.println("Customers");
 			statement.executeUpdate(createOrders);
             System.out.println("Orders");
+            statement.executeUpdate(createItems);
+            System.out.println("Items");
             statement.executeUpdate(createStockItems);
             System.out.println("StockItems");
 			statement.executeUpdate(createLineItems);
@@ -312,12 +327,6 @@ public class DBLoader
     */
     private void populateTables()
     {
-        int warehouses = 1;
-        int stations = 5;
-        int customers = 50;
-        int orders = 20;
-        int items = 200;
-
         // define the insert statements
         String warehousesString = "insert into Warehouses (warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
         + "values (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -328,10 +337,11 @@ public class DBLoader
         + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String ordersString = "insert into Orders (order_id, customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
         + "values (?, ?, ?, ?, ?, ?, ?)";
-        String lineItemsString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivered)"
+        String lineItemsString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
         + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        String stockItemsString = "insert into StockItems (item_id, warehouse_id, name, price, in_stock, sold_this_year, included_in_orders)"
-        + "values (?, ?, ?, ?, ?, ?, ?)";
+        String itemsString = "insert into Items (item_id, name, price) values (?, ?, ?)";
+        String stockItemsString = "insert into StockItems (item_id, warehouse_id, in_stock, sold_this_year, included_in_orders)"
+        + "values (?, ?, ?, ?, ?)";
 
         // instantiate the prepared statements
         PreparedStatement insertWarehouses = null;
@@ -339,6 +349,7 @@ public class DBLoader
         PreparedStatement insertCustomers = null;
         PreparedStatement insertOrders = null;
         PreparedStatement insertLineItems = null;
+        PreparedStatement insertItems = null;
         PreparedStatement insertStockItems = null;
         try
         {
@@ -347,6 +358,7 @@ public class DBLoader
             insertCustomers = con.prepareStatement(customersString);
             insertOrders = con.prepareStatement(ordersString);
             insertLineItems = con.prepareStatement(lineItemsString);
+            insertItems = con.prepareStatement(itemsString);
             insertStockItems = con.prepareStatement(stockItemsString);
         }
         catch (SQLException e)
@@ -363,56 +375,71 @@ public class DBLoader
         float warehouseTotal = 0;
         float stationTotal = 0;
         float customerTotal = 0;
-        ArrayList<Integer> itemLog = new ArrayList<Integer>();
+
+        // HashMaps are used to keep track of item costs, item order counts, and ytd sold counts.
+        // this enables us to update the counts without querying the database
         HashMap<Integer, Integer> ytdSoldCounts = new HashMap<Integer, Integer>();
         HashMap<Integer, Integer> itemOrderCounts = new HashMap<Integer, Integer>();
         HashMap<Integer, Float> itemCost = new HashMap<Integer, Float>();
         try
         {
+            // generate the items
+            for (int i = 1; i <= ITEMS; i++)
+            {
+                // add initial value to hashmap
+                float cost = getPrice(rand);
+                itemCost.put(i, new Float(cost));
+
+                insertItems.setInt(1, i);
+                insertItems.setString(2, getName(rand));
+                insertItems.setString(3, twoDecimals(cost));
+                insertItems.addBatch();
+            }
+
             // generate the warehouses
-            for (int i = 1; i <= warehouses; i++)
+            for (int i = 1; i <= WAREHOUSES; i++)
             {
                 warehouseTotal = 0;
 
                 // generate the stock items
-                for (int j = 1; j <= items; j++)
+                for (int j = 1; j <= ITEMS; j++)
                 {
                     // insert initial entries into the hashmaps
-                    float cost = getPrice(rand);
-                    itemLog.add(j);
                     ytdSoldCounts.put(j, 0);
                     itemOrderCounts.put(j, 0);
-                    itemCost.put(j, new Float(cost));
 
                     insertStockItems.setInt(1, j);
                     insertStockItems.setInt(2, i);
-                    insertStockItems.setString(3, getName(rand));
-                    insertStockItems.setString(4, twoDecimals(cost));
-                    insertStockItems.setInt(5, rand.nextInt(200));
-                    insertStockItems.setString(6, "0");
-                    insertStockItems.setString(7, "0");
+                    insertStockItems.setInt(3, rand.nextInt(200));
+                    insertStockItems.setString(4, "0");
+                    insertStockItems.setString(5, "0");
                     insertStockItems.addBatch();
                 }
 
                 // generate the stations
-                for (int j = 1; j <= stations; j++)
+                for (int j = 1; j <= STATIONS_PER_WAREHOUSE; j++)
                 {
                     stationTotal = 0;
 
                     // generate the customers
-                    for (int k = 1; k <= customers; k++)
+                    for (int k = 1; k <= CUSTOMERS_PER_STATION; k++)
                     {
                         customerTotal = 0;
 
                         // generate the orders
-                        for (int l = 1; l <= orders; l++)
+                        int orderNum = rand.nextInt(MAX_ORDERS_PER_CUSTOMER) + 1;
+                        for (int l = 1; l <= orderNum; l++)
                         {
-                            int lineCount = rand.nextInt(15) + 1;
+                            // date for order placement
+                            String theDate = getDate(rand);
+
+                            // generate the number of line items to put in the order
+                            int lineCount = rand.nextInt((MAX_LINE_ITEMS_PER_ORDER - MIN_LINE_ITEMS_PER_ORDER) + 1) + MIN_LINE_ITEMS_PER_ORDER;
 
                             // generate the line items for the order
                             for (int m = 1; m <= lineCount; m++)
                             {
-                                int itemID = itemLog.get(rand.nextInt(itemLog.size()));
+                                int itemID = rand.nextInt(ITEMS) + 1;
                                 int itemCount = rand.nextInt(10) + 1;
                                 float lineTotal = itemCost.get(itemID).floatValue() * itemCount;
                                 customerTotal += lineTotal;
@@ -429,11 +456,10 @@ public class DBLoader
                                 insertLineItems.setInt(6, itemID);
                                 insertLineItems.setInt(7, itemCount);
                                 insertLineItems.setString(8, twoDecimals(lineTotal));
-                                insertLineItems.setInt(9, Math.round(rand.nextFloat()));
+                                insertLineItems.setInt(9, getGreaterThanDate(rand, theDate));
                                 insertLineItems.addBatch();
                             }
 
-                            String theDate = getDate(rand);
                             insertOrders.setInt(1, l);
                             insertOrders.setInt(2, k);
                             insertOrders.setInt(3, j);
@@ -500,6 +526,8 @@ public class DBLoader
         // execute the batch inserts
         try
         {
+            insertItems.executeBatch();
+            System.out.println("Items inserted");
             insertWarehouses.executeBatch();
             System.out.println("Warehouses inserted");
             insertStockItems.executeBatch();
@@ -528,14 +556,14 @@ public class DBLoader
             PreparedStatement itemsSold = con.prepareStatement(itemsSoldString);
             PreparedStatement orderCount = con.prepareStatement(orderCountString);
 
-            for (int i = 0; i < itemLog.size(); i++)
+            for (int i = 1; i <= ITEMS i++)
             {
-                int soldQuant = ytdSoldCounts.get(itemLog.get(i)).intValue();
-                int orderQuant = itemOrderCounts.get(itemLog.get(i)).intValue();
+                int soldQuant = ytdSoldCounts.get(i).intValue();
+                int orderQuant = itemOrderCounts.get(i).intValue();
                 itemsSold.setInt(1, soldQuant);
-                itemsSold.setInt(2, itemLog.get(i));
+                itemsSold.setInt(2, i);
                 orderCount.setInt(1, orderQuant);
-                orderCount.setInt(2, itemLog.get(i));
+                orderCount.setInt(2, i);
                 itemsSold.execute();
                 orderCount.execute();
             }
@@ -703,6 +731,11 @@ public class DBLoader
         return output;
     }
 
+    private String getGreaterThanDate(Random rand, String date)
+    {
+
+    }
+
     /**
     * Returns a random discount
     * @param rand Random number generator object
@@ -762,6 +795,20 @@ public class DBLoader
             endIndex--;
         }
         return sb.substring(0, endIndex);
+    }
+
+    /**
+    * Generates a random number which trends towards a mean
+    * @param rand Random number generator object
+    */
+    private int randomMean(Random rand)
+    {
+        // get a Gaussian value
+        double gauss = rand.nextGaussian();
+
+        // adjust the random Gaussian value to the mean
+        gauss = gauss + 1.0;
+
     }
 
 }
