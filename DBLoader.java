@@ -14,6 +14,7 @@
 */
 
 import java.sql.*;
+import java.math.*;
 import java.io.FileInputStream;
 import java.util.Scanner;
 import java.io.IOException;
@@ -232,8 +233,26 @@ public class DBLoader
 			"constraint Orders_fk1 foreign key(station_id, warehouse_id) references Stations(station_id, warehouse_id), " +
             "constraint Orders_fk2 foreign key(customer_id, station_id) references Customers(customer_id, station_id) )";
 		
+        dropStatements[4] = "drop table Items cascade constraints";
+        String createItems = "create table Items (" +
+            "item_id number(15) not null, " +
+            "name varchar2(20), " +
+            "price number(5, 2)," +
+            "constraint Items_pk primary key(item_id) )";
+		
+		dropStatements[5] = "drop table StockItems cascade constraints";
+		String createStockItems = "create table StockItems (" +
+			"item_id number(15) not null, " +
+            "warehouse_id number(3), " +
+			"in_stock number(20), " +
+			"sold_this_year number(10), " +
+			"included_in_orders number(4), " +
+			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
+            "constraint StockItems_fk1 foreign key(item_id) references Items(item_id), " +
+			"constraint StockItems_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
+		
 
-		dropStatements[4] = "drop table LineItems cascade constraints";
+		dropStatements[6] = "drop table LineItems cascade constraints";
 		String createLineItems = "create table LineItems (" +
 			"line_id number(15) not null, " +
             "order_id number(10), " +
@@ -248,23 +267,7 @@ public class DBLoader
 			"constraint LineItems_fk1 foreign key(order_id, customer_id, station_id, warehouse_id) references Orders(order_id, customer_id, station_id, warehouse_id), " +
             "constraint LineItems_fk2 foreign key(item_id, warehouse_id) references StockItems(item_id, warehouse_id) )";
 
-        dropStatements[5] = "drop table Items cascade constraints";
-        String createItems = "create table Items (" +
-            "item_id number(15) unique not null, " +
-            "name varchar2(20), " +
-            "price number(5, 2)," +
-            "constraint Items_pk primary key(item_id) )";
 
-		dropStatements[6] = "drop table StockItems cascade constraints";
-		String createStockItems = "create table StockItems (" +
-			"item_id number(15) not null, " +
-            "warehouse_id number(3), " +
-			"in_stock number(20), " +
-			"sold_this_year number(10), " +
-			"included_in_orders number(4), " +
-			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
-            "constraint StockItems_fk1 foreign key(item_id) references Items(item_id), " +
-			"constraint StockItems_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 
         try
         {
@@ -456,7 +459,7 @@ public class DBLoader
                                 insertLineItems.setInt(6, itemID);
                                 insertLineItems.setInt(7, itemCount);
                                 insertLineItems.setString(8, twoDecimals(lineTotal));
-                                insertLineItems.setInt(9, getGreaterThanDate(rand, theDate));
+                                //insertLineItems.setInt(9, getGreaterThanDate(rand, theDate));
                                 insertLineItems.addBatch();
                             }
 
@@ -556,7 +559,7 @@ public class DBLoader
             PreparedStatement itemsSold = con.prepareStatement(itemsSoldString);
             PreparedStatement orderCount = con.prepareStatement(orderCountString);
 
-            for (int i = 1; i <= ITEMS i++)
+            for (int i = 1; i <= ITEMS; i++)
             {
                 int soldQuant = ytdSoldCounts.get(i).intValue();
                 int orderQuant = itemOrderCounts.get(i).intValue();
@@ -578,7 +581,79 @@ public class DBLoader
 
         System.out.println("All data inserted. Success!");
     }
-
+	
+	/* processes the Payment, updates appropriate tuples, uses BigDecimal for payment as it is recommended to be used with currencies
+		*/
+	public void processPayment(int customer_id, int station_id, BigDecimal payment) 
+	{
+		System.out.println("Starting to process payment transaction for customer " + customer_id + "of station " + station_id);
+		System.out.println("Updating balance");
+		updateBalance(customer_id, station_id, payment);
+		updatePaidAmount(customer_id, station_id, payment);
+		updateTotalPayments(customer_id, station_id);
+	}
+	
+	/**
+	* Updates the outstanding balance based on the payment amount
+	* @param customer_id, station_id and payment
+	*/
+	public void updateBalance(int customer_id, int station_id, BigDecimal payment)
+	{
+		
+		try {
+			String updateBalanceString = "update Customers set balance = balance - ? where customer_id = ? and station_id = ?";
+			PreparedStatement updateBalance = con.prepareStatement(updateBalanceString);
+			updateBalance.setBigDecimal(1, payment);
+			updateBalance.setInt(2, customer_id);
+			updateBalance.setInt(3, station_id);
+			updateBalance.executeUpdate();
+		} 
+		catch (SQLException e)
+		{
+			System.out.println("Error updating the balance");
+			System.exit(1);
+		}
+	}
+	/**
+	* Updates the amount paid for the year 
+	*/
+	
+	public void updatePaidAmount(int customer_id, int station_id, BigDecimal payment)
+	{
+		try {
+			String updatePaidAmountString = "update Customers set paid_amount = paid_amount + ? where customer_id = ? and station_id = ?";
+			PreparedStatement updatePaidAmount = con.prepareStatement(updatePaidAmountString);
+			updatePaidAmount.setBigDecimal(1, payment);
+			updatePaidAmount.setInt(2, customer_id);
+			updatePaidAmount.setInt(3, station_id);
+			updatePaidAmount.executeUpdate();
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error updating paid amount in the Customer database");
+			System.exit(1);
+		}
+	}
+	
+	/**
+	* Increments number of payments made for a customer 
+	*/
+	public void updateTotalPayments(int customer_id, int station_id)
+	{
+		try {
+			String updateTotalPaymentsString = "update Customers set total_payments = total_payments + 1 where customer_id = ? and station_id = ?";
+			PreparedStatement updateTotalPayments = con.prepareStatement(updateTotalPaymentsString);
+			updateTotalPayments.setInt(1, customer_id);
+			updateTotalPayments.setInt(2, station_id);
+			updateTotalPayments.executeUpdate();
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error updating total payments");
+			System.exit(1);
+		}
+	}
+    
 
     /**
     * Generates and returns a random alphanumeric name of length between
@@ -731,10 +806,10 @@ public class DBLoader
         return output;
     }
 
-    private String getGreaterThanDate(Random rand, String date)
-    {
-
-    }
+    // private String getGreaterThanDate(Random rand, String date)
+    // {
+    //
+    // }
 
     /**
     * Returns a random discount
@@ -801,14 +876,14 @@ public class DBLoader
     * Generates a random number which trends towards a mean
     * @param rand Random number generator object
     */
-    private int randomMean(Random rand)
-    {
-        // get a Gaussian value
-        double gauss = rand.nextGaussian();
-
-        // adjust the random Gaussian value to the mean
-        gauss = gauss + 1.0;
-
-    }
+    // private int randomMean(Random rand)
+    // {
+    //     // get a Gaussian value
+    //     double gauss = rand.nextGaussian();
+    //
+    //     // adjust the random Gaussian value to the mean
+    //     gauss = gauss + 1.0;
+    //
+    // }
 
 }
