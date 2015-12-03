@@ -44,10 +44,10 @@ public class DBLoader
     private final int MAX_PRICE = 50;
 
     // constants defining the amount of data to generate
-    private final int WAREHOUSES = 1;
-    private final int STATIONS_PER_WAREHOUSE = 8;
-    private final int CUSTOMERS_PER_STATION = 3000;
-    private final int ITEMS = 10000;
+    private int WAREHOUSES = 1;
+    private int STATIONS_PER_WAREHOUSE = 8;
+    private int CUSTOMERS_PER_STATION = 3000;
+    private int ITEMS = 10000;
     private final int MAX_ORDERS_PER_CUSTOMER = 100;
     private final int MIN_LINE_ITEMS_PER_ORDER = 5;
     private final int MAX_LINE_ITEMS_PER_ORDER = 15;
@@ -74,6 +74,10 @@ public class DBLoader
     */
 	public DBLoader()
     {
+        ///////////////////////////////////
+        // Load the data into the database
+        ///////////////////////////////////
+
         scan = new Scanner(System.in);
 
         // ask the user if they want to switch databases
@@ -126,7 +130,52 @@ public class DBLoader
     	// populate the tables with generated data
     	populateTables();
 
-        scan.close();
+        ///////////////////////////////////////
+        // Loop to ask user for function input
+        ///////////////////////////////////////
+
+        do
+        {
+            System.out.println("\n What would you like to do?");
+            System.out.println("c - Create a new order");
+            System.out.println("p - Process a payment");
+            System.out.println("s - Check on the status of a recent order");
+            System.out.println("d - Perform a warehouse delivery");
+            System.out.println("l - Check the stock level of a station");
+            System.out.println("q - Quit");
+            System.out.print("(c, p, s, d, l, q) ?: ");
+            answer = scan.nextLine();
+
+
+            if (answer.toUpperCase().equals("C"))
+            {
+
+            }
+            else if (answer.toUpperCase().equals("P"))
+            {
+
+            }
+            else if (answer.toUpperCase().equals("S"))
+            {
+
+            }
+            else if (answer.toUpperCase().equals("D"))
+            {
+
+            }
+            else if (answer.toUpperCase().equals("L"))
+            {
+
+            }
+            else if (!answer.toUpperCase().equals("Q"))
+            {
+                System.out.println("Invalid input, please try again.\n");
+            }
+        }
+        while (!answer.toUpperCase().equals("Q"));
+
+
+        // close the connection and scanner
         try
         {
             con.close();
@@ -135,6 +184,7 @@ public class DBLoader
         {
             System.out.println("Error closing connection.");
         }
+        scan.close();
 	}
 
     /**
@@ -166,10 +216,62 @@ public class DBLoader
     {
 		System.out.println("creating tables...");
 		String startTransaction = "SET TRANSACTION READ WRITE";
-        String[] dropStatements = new String[7];
+        String[] dropStatements = new String[19];
 
-		dropStatements[0] = "drop table Warehouses cascade constraints";
-		
+        dropStatements[0] = "drop sequence WarehousesSequence";
+        dropStatements[1] = "drop sequence StationsSequence";
+        dropStatements[2] = "drop sequence CustomersSequence";
+        dropStatements[3] = "drop sequence OrdersSequence";
+        dropStatements[4] = "drop sequence LineItemsSequence";
+        dropStatements[5] = "drop sequence ItemsSequence";
+
+        String createWarehousesSequence = "create sequence WarehousesSequence start with 1 increment by 1";
+        String createStationsSequence = "create sequence StationsSequence start with 1 increment by 1";
+        String createCustomersSequence = "create sequence CustomersSequence start with 1 increment by 1";
+        String createOrdersSequence = "create sequence OrdersSequence start with 1 increment by 1";
+        String createLineItemsSequence = "create sequence LineItemsSequence start with 1 increment by 1";
+        String createItemsSequence = "create sequence ItemsSequence start with 1 increment by 1";
+
+        dropStatements[6] = "drop trigger WarehousesSequenceTrigger";
+        dropStatements[7] = "drop trigger StationsSequenceTrigger";
+        dropStatements[8] = "drop trigger CustomersSequenceTrigger";
+        dropStatements[9] = "drop trigger OrdersSequenceTrigger";
+        dropStatements[10] = "drop trigger LineItemsSequenceTrigger";
+        dropStatements[11] = "drop trigger ItemsSequenceTrigger";
+
+        String createWarehousesSequenceTrigger = "create trigger WarehousesSequenceTrigger" +
+            "before insert on Warehouses referencing new as new for each row" +
+            "begin" +
+            "select WarehousesSequence.nextval into :new.warehouse_id from dual;" +
+            "end;";
+        String createStationsSequenceTrigger = "create trigger StationsSequenceTrigger" +
+            "before insert on Stations referencing new as new for each row" +
+            "begin" +
+            "select StationsSequence.nextval into :new.station_id from dual;" +
+            "end;";
+        String createCustomersSequenceTrigger = "create trigger CustomersSequenceTrigger" +
+            "before insert on Customers referencing new as new for each row" +
+            "begin" +
+            "select CustomersSequence.nextval into :new.customer_id from dual;" +
+            "end;";
+        String createOrdersSequenceTrigger = "create trigger OrdersSequenceTrigger" +
+            "before insert on Orders referencing new as new for each row" +
+            "begin" +
+            "select OrdersSequence.nextval into :new.order_id from dual;" +
+            "end;";
+        String createLineItemsSequenceTrigger = "create trigger LineItemsSequenceTrigger" +
+            "before insert on LineItems referencing new as new for each row" +
+            "begin" +
+            "select LineItemsSequence.nextval into :new.line_id from dual;" +
+            "end;";
+        String createItemsSequenceTrigger = "create trigger ItemsSequenceTrigger" +
+            "before insert on Items referencing new as new for each row" +
+            "begin" +
+            "select ItemsSequence.nextval into :new.item_id from dual;" +
+            "end;";
+
+
+		dropStatements[12] = "drop table Warehouses cascade constraints";
 		String createWarehouses = "create table Warehouses (" +
 			"warehouse_id number(3) not null, " + 
 			"name varchar2(20), " +
@@ -182,7 +284,7 @@ public class DBLoader
 			"constraint Warehouses_pk primary key(warehouse_id) )";
 		
 
-		dropStatements[1] = "drop table Stations cascade constraints";
+		dropStatements[13] = "drop table Stations cascade constraints";
 		String createStations = "create table Stations (" +
 			"station_id number(3) not null, " +
 			"warehouse_id number(3) not null, " +
@@ -197,7 +299,7 @@ public class DBLoader
 			"constraint Stations_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 	
 
-		dropStatements[2] = "drop table Customers cascade constraints";
+		dropStatements[14] = "drop table Customers cascade constraints";
 		String createCustomers = "create table Customers (" +
 			"customer_id number(6) not null, " +
 			"station_id number(3) not null, " +
@@ -220,7 +322,7 @@ public class DBLoader
 			"constraint Customers_fk foreign key(station_id, warehouse_id) references Stations(station_id, warehouse_id) )";
 		
 
-		dropStatements[3] = "drop table Orders cascade constraints";
+		dropStatements[15] = "drop table Orders cascade constraints";
 		String createOrders = "create table Orders (" +
 			"order_id number(10) not null, " +
 			"customer_id number(6), " +
@@ -233,14 +335,14 @@ public class DBLoader
 			"constraint Orders_fk1 foreign key(station_id, warehouse_id) references Stations(station_id, warehouse_id), " +
             "constraint Orders_fk2 foreign key(customer_id, station_id) references Customers(customer_id, station_id) )";
 		
-        dropStatements[4] = "drop table Items cascade constraints";
+        dropStatements[16] = "drop table Items cascade constraints";
         String createItems = "create table Items (" +
             "item_id number(15) not null, " +
             "name varchar2(20), " +
             "price number(5, 2)," +
             "constraint Items_pk primary key(item_id) )";
 		
-		dropStatements[5] = "drop table StockItems cascade constraints";
+		dropStatements[17] = "drop table StockItems cascade constraints";
 		String createStockItems = "create table StockItems (" +
 			"item_id number(15) not null, " +
             "warehouse_id number(3), " +
@@ -252,7 +354,7 @@ public class DBLoader
 			"constraint StockItems_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 		
 
-		dropStatements[6] = "drop table LineItems cascade constraints";
+		dropStatements[18] = "drop table LineItems cascade constraints";
 		String createLineItems = "create table LineItems (" +
 			"line_id number(15) not null, " +
             "order_id number(10), " +
@@ -268,16 +370,18 @@ public class DBLoader
             "constraint LineItems_fk2 foreign key(item_id, warehouse_id) references StockItems(item_id, warehouse_id) )";
 
 
-
+        // create the statement and start a transaction
         try
         {
-		  statement = con.createStatement();
+            statement = con.createStatement();
             statement.executeUpdate(startTransaction);
         }
         catch (SQLException e)
         {
             System.out.println("Error creating statement");
         }
+
+        // drop the sequences, triggers, and tables, if they exist
         for (int i = 0; i < dropStatements.length; i++)
         {
             try
@@ -297,7 +401,39 @@ public class DBLoader
             System.out.println("Commitment failure.");
         }
 
+        // create the sequences
+        try
+        {
+            statement.executeUpdate(createWarehousesSequence);
+            statement.executeUpdate(createStationsSequence);
+            statement.executeUpdate(createCustomersSequence);
+            statement.executeUpdate(createOrdersSequence);
+            statement.executeUpdate(createLineItemsSequence);
+            statement.executeUpdate(createItemsSequence);
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error creating sequences. " + e.toString());
+            System.exit(1);
+        }
 
+        // create the sequence triggers
+        try
+        {
+            statement.executeUpdate(createWarehousesSequenceTrigger);
+            statement.executeUpdate(createStationsSequenceTrigger);
+            statement.executeUpdate(createCustomersSequenceTrigger);
+            statement.executeUpdate(createOrdersSequenceTrigger);
+            statement.executeUpdate(createLineItemsSequenceTrigger);
+            statement.executeUpdate(createItemsSequenceTrigger);
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error creating sequence triggers. " + e.toString());
+            System.exit(1);
+        }
+
+        // create the tables
 		try {
 			statement.executeUpdate(startTransaction);
 			statement.executeUpdate(createWarehouses);
@@ -331,18 +467,18 @@ public class DBLoader
     private void populateTables()
     {
         // define the insert statements
-        String warehousesString = "insert into Warehouses (warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
-        + "values (?, ?, ?, ?, ?, ?, ?, ?)";
-        String stationsString = "insert into Stations (station_id, warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
-        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        String customersString = "insert into Customers (customer_id, station_id, warehouse_id, fname, mi, lname, address, city, state, zip, phone, "
-        + "join_date, discount, balance, paid_amount, total_payments, total_deliveries)"
-        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        String ordersString = "insert into Orders (order_id, customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
+        String warehousesString = "insert into Warehouses (name, address, city, state, zip, tax_rate, sum_sales)"
         + "values (?, ?, ?, ?, ?, ?, ?)";
-        String lineItemsString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
-        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        String itemsString = "insert into Items (item_id, name, price) values (?, ?, ?)";
+        String stationsString = "insert into Stations (warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
+        + "values (?, ?, ?, ?, ?, ?, ?, ?)";
+        String customersString = "insert into Customers (station_id, warehouse_id, fname, mi, lname, address, city, state, zip, phone, "
+        + "join_date, discount, balance, paid_amount, total_payments, total_deliveries)"
+        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String ordersString = "insert into Orders (customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
+        + "values (?, ?, ?, ?, ?, ?)";
+        String lineItemsString = "insert into LineItems (order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
+        + "values (?, ?, ?, ?, ?, ?, ?, ?)";
+        String itemsString = "insert into Items (name, price) values (?, ?)";
         String stockItemsString = "insert into StockItems (item_id, warehouse_id, in_stock, sold_this_year, included_in_orders)"
         + "values (?, ?, ?, ?, ?)";
 
@@ -393,9 +529,8 @@ public class DBLoader
                 float cost = getPrice(rand);
                 itemCost.put(i, new Float(cost));
 
-                insertItems.setInt(1, i);
-                insertItems.setString(2, getName(rand));
-                insertItems.setString(3, twoDecimals(cost));
+                insertItems.setString(1, getName(rand));
+                insertItems.setString(2, twoDecimals(cost));
                 insertItems.addBatch();
             }
 
@@ -411,11 +546,10 @@ public class DBLoader
                     ytdSoldCounts.put(j, 0);
                     itemOrderCounts.put(j, 0);
 
-                    insertStockItems.setInt(1, j);
-                    insertStockItems.setInt(2, i);
-                    insertStockItems.setInt(3, rand.nextInt(200));
+                    insertStockItems.setInt(1, i);
+                    insertStockItems.setInt(2, randomMean(rand));
+                    insertStockItems.setString(3, "0");
                     insertStockItems.setString(4, "0");
-                    insertStockItems.setString(5, "0");
                     insertStockItems.addBatch();
                 }
 
@@ -451,72 +585,67 @@ public class DBLoader
                                 ytdSoldCounts.put(itemID, new Integer(ytdSoldCounts.get(itemID).intValue() + itemCount));
                                 itemOrderCounts.put(itemID, new Integer(itemOrderCounts.get(itemID).intValue() + 1));
 
-                                insertLineItems.setInt(1, m);
-                                insertLineItems.setInt(2, l);
-                                insertLineItems.setInt(3, k);
-                                insertLineItems.setInt(4, j);
-                                insertLineItems.setInt(5, i);
-                                insertLineItems.setInt(6, itemID);
-                                insertLineItems.setInt(7, itemCount);
-                                insertLineItems.setString(8, twoDecimals(lineTotal));
-                                //insertLineItems.setInt(9, getGreaterThanDate(rand, theDate));
+                                insertLineItems.setInt(1, l);
+                                insertLineItems.setInt(2, k);
+                                insertLineItems.setInt(3, j);
+                                insertLineItems.setInt(4, i);
+                                insertLineItems.setInt(5, itemID);
+                                insertLineItems.setInt(6, itemCount);
+                                insertLineItems.setString(7, twoDecimals(lineTotal));
+                                insertLineItems.setInt(8, getDate(rand, theDate));
                                 insertLineItems.addBatch();
                             }
 
-                            insertOrders.setInt(1, l);
-                            insertOrders.setInt(2, k);
-                            insertOrders.setInt(3, j);
-                            insertOrders.setInt(4, i);
-                            insertOrders.setString(5, theDate);
-                            insertOrders.setInt(6, Math.round(rand.nextFloat()));
-                            insertOrders.setInt(7, lineCount);
+                            insertOrders.setInt(1, k);
+                            insertOrders.setInt(2, j);
+                            insertOrders.setInt(3, i);
+                            insertOrders.setString(4, theDate);
+                            insertOrders.setInt(5, Math.round(rand.nextFloat()));
+                            insertOrders.setInt(6, lineCount);
                             insertOrders.addBatch();
 
                         }
 
                         float balance = getPrice(rand, customerTotal);
-                        insertCustomers.setInt(1, k);
-                        insertCustomers.setInt(2, j);
-                        insertCustomers.setInt(3, i);
-                        insertCustomers.setString(4, getName(rand));
-                        insertCustomers.setString(5, getMI(rand));
-                        insertCustomers.setString(6, getName(rand));
-                        insertCustomers.setString(7, getAddress(rand));
-                        insertCustomers.setString(8, getName(rand));
-                        insertCustomers.setString(9, getState(rand));
-                        insertCustomers.setString(10, getZip(rand));
-                        insertCustomers.setString(11, getPhone(rand));
-                        insertCustomers.setString(12, getDate(rand));
-                        insertCustomers.setString(13, getDiscount(rand));
-                        insertCustomers.setString(14, twoDecimals(balance));
-                        insertCustomers.setString(15, twoDecimals(customerTotal - balance));
-                        insertCustomers.setInt(16, rand.nextInt(20) + 1);
-                        insertCustomers.setInt(17, rand.nextInt(30) + 1);
+                        insertCustomers.setInt(1, j);
+                        insertCustomers.setInt(2, i);
+                        insertCustomers.setString(3, getName(rand));
+                        insertCustomers.setString(4, getMI(rand));
+                        insertCustomers.setString(5, getName(rand));
+                        insertCustomers.setString(6, getAddress(rand));
+                        insertCustomers.setString(7, getName(rand));
+                        insertCustomers.setString(8, getState(rand));
+                        insertCustomers.setString(9, getZip(rand));
+                        insertCustomers.setString(10, getPhone(rand));
+                        insertCustomers.setString(11, getDate(rand));
+                        insertCustomers.setString(12, getDiscount(rand));
+                        insertCustomers.setString(13, twoDecimals(balance));
+                        insertCustomers.setString(14, twoDecimals(customerTotal - balance));
+                        insertCustomers.setInt(15, rand.nextInt(20) + 1);
+                        insertCustomers.setInt(16, rand.nextInt(30) + 1);
                         insertCustomers.addBatch();
                         stationTotal += customerTotal;
                     }
 
-                    insertStations.setInt(1, j);
-                    insertStations.setInt(2, i);
-                    insertStations.setString(3, getName(rand));
-                    insertStations.setString(4, getAddress(rand));
-                    insertStations.setString(5, getName(rand));
-                    insertStations.setString(6, getState(rand));
-                    insertStations.setString(7, getZip(rand));
-                    insertStations.setString(8, getTax(rand));
-                    insertStations.setString(9, twoDecimals(stationTotal));
+                    insertStations.setInt(1, i);
+                    insertStations.setString(2, getName(rand));
+                    insertStations.setString(3, getAddress(rand));
+                    insertStations.setString(4, getName(rand));
+                    insertStations.setString(5, getState(rand));
+                    insertStations.setString(6, getZip(rand));
+                    insertStations.setString(7, getTax(rand));
+                    insertStations.setString(8, twoDecimals(stationTotal));
                     insertStations.addBatch();
                     warehouseTotal += stationTotal;
                 }
 
-                insertWarehouses.setInt(1, i);
-                insertWarehouses.setString(2, getName(rand));
-                insertWarehouses.setString(3, getAddress(rand));
-                insertWarehouses.setString(4, getName(rand));
-                insertWarehouses.setString(5, getState(rand));
-                insertWarehouses.setString(6, getZip(rand));
-                insertWarehouses.setString(7, getTax(rand));
-                insertWarehouses.setString(8, twoDecimals(warehouseTotal));
+                insertWarehouses.setString(1, getName(rand));
+                insertWarehouses.setString(2, getAddress(rand));
+                insertWarehouses.setString(3, getName(rand));
+                insertWarehouses.setString(4, getState(rand));
+                insertWarehouses.setString(5, getZip(rand));
+                insertWarehouses.setString(6, getTax(rand));
+                insertWarehouses.setString(7, twoDecimals(warehouseTotal));
                 insertWarehouses.addBatch();
 
             }
@@ -582,8 +711,31 @@ public class DBLoader
         System.out.println("All data inserted. Success!");
     }
 	
-	/* processes the Payment, updates appropriate tuples, uses BigDecimal for payment as it is recommended to be used with currencies
-		*/
+
+    /********************************************
+    * Methods for executing the transactions
+    *********************************************/
+
+    /**
+    * Creates a new order with the passed information
+    * @param warehouse int containing the warehouse_id
+    * @param station int containing the station_id
+    * @param customer int containing the customer_id for the new order
+    * @param items int array containing the item numbers in the order
+    * @param counts int array containing the item counts in the order
+    * @param totalCount int containing the total number of individual items ordered
+    */
+    public void newOrder(int warehouse, int station, int customer, int[] items, int[] counts, int totalCount)
+    {
+        String addOrderString = "insert into Orders (customer_id, station_id, warehouse_id, order_date, completed, line_item_count)" +
+            "values (?, ?, ?, ?, ?, ?)";
+        String addLineItemString = "insert into LineItems (order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)" +
+            " values (?, ?, ?, ?, ?, ?, ?, ?)";
+    }
+
+	/*
+    * processes the Payment, updates appropriate tuples, uses BigDecimal for payment as it is recommended to be used with currencies
+    */
 	public void processPayment(int customer_id, int station_id, BigDecimal payment) 
 	{
 		System.out.println("Starting to process payment transaction for customer " + customer_id + "of station " + station_id);
@@ -614,10 +766,10 @@ public class DBLoader
 			System.exit(1);
 		}
 	}
+
 	/**
 	* Updates the amount paid for the year 
 	*/
-	
 	public void updatePaidAmount(int customer_id, int station_id, BigDecimal payment)
 	{
 		try {
@@ -781,35 +933,87 @@ public class DBLoader
     }
 
     /**
-    * Returns a random date
+    * Returns a random date greater than the passed year, month and day
+    * @param rand Random number generator object
+    * @param year Year of the date after which the returned date should fall, must be less than 2015.
+    * @param month Month of the date after which the returned date should fall, 0 if not specified.
+    * @param day Day of the date after which the returned date should fall, 0 if not specified.
+    * @return String containing the date
+    */
+    private String getDate(Random rand, int year, int month, int day)
+    {
+        if (year > 2015 || month > 12 || month < 0 || day > 31 || day < 0)
+            return null;
+
+        // compute the offsets for the random date generator
+        int yearRange = 2015 - year;
+        int monthRange = 12 - month;
+        int dayRange = 31 - day;
+
+        // compute the random date
+        int newYear = year + rand.nextInt(yearRange);
+        int newMonth = month + rand.nextInt(monthRange) + 1;
+        int newDay = day + rand.nextInt(dayRange) + 1;
+
+        // correct for any date errors
+        if (newMonth > 12)
+            newMonth = 12;
+        if ((newMonth == 9 || newMonth == 4 || newMonth == 6 || newMonth == 11) && newDay > 30)
+            newDay = 30;
+        if (newMonth == 2 && newDay > 28)
+            newDay = 28;
+
+        // build the output string
+        String monthString = null;
+        String dayString = null;
+        if (newMonth < 10)
+            monthString = "0" + newMonth;
+        else
+            monthString = "" + newMonth;
+        if (newDay < 10)
+            dayString = "0" + newDay;
+        else
+            dayString = "" + newDay;
+
+        String output = newYear + "-" + monthString + "-" + dayString;
+        return output;
+    }
+
+    /**
+    * Returns a random date after 2010
     * @param rand Random number generator object
     * @return String containing the date
     */
     private String getDate(Random rand)
     {
-        int year = 2010 + rand.nextInt(6);
-        int month = rand.nextInt(12) + 1;
-        int day = rand.nextInt(28) + 1;
-
-        String monthString = null;
-        String dayString = null;
-        if (month < 10)
-            monthString = "0" + month;
-        else
-            monthString = "" + month;
-        if (day < 10)
-            dayString = "0" + day;
-        else
-            dayString = "" + day;
-
-        String output = year + "-" + monthString + "-" + dayString;
-        return output;
+        return getDate(rand, 2010, 0, 0);
     }
 
-    // private String getGreaterThanDate(Random rand, String date)
-    // {
-    //
-    // }
+    /**
+    * Returns a random date after the passed date string
+    * @param rand Random number generator object
+    * @param date Date string after which the returned date should fall
+    * @return String containing the date
+    */
+    private String getDate(Random rand, String date)
+    {
+        // parse the date
+        String[] splitDate = date.split("-");
+
+        int oldYear, oldMonth, oldDay;
+        try
+        {
+            oldYear = Integer.parseInt(splitDate[0]);
+            oldMonth = Integer.parseInt(splitDate[1]);
+            oldDay = Integer.parseInt(splitDate[2]);
+        }
+        catch(NumberFormatException e)
+        {
+            System.out.println("Error parsing date string");
+        }
+
+        return getDate(rand, oldYear, oldMonth, oldDay);
+    }
 
     /**
     * Returns a random discount
@@ -873,17 +1077,20 @@ public class DBLoader
     }
 
     /**
-    * Generates a random number which trends towards a mean
+    * Generates a random number which trends towards a mean of AVE_ITEMS_IN_STOCK_PER_WAREHOUSE.
+    * Used to supply the random stock number.
     * @param rand Random number generator object
     */
-    // private int randomMean(Random rand)
-    // {
-    //     // get a Gaussian value
-    //     double gauss = rand.nextGaussian();
-    //
-    //     // adjust the random Gaussian value to the mean
-    //     gauss = gauss + 1.0;
-    //
-    // }
+    private int randomMean(Random rand)
+    {
+        // get a Gaussian value
+        double gauss = rand.nextGaussian();
+
+        // adjust the random Gaussian value to the mean
+        gauss = gauss + 1.0;
+        gauss = gauss + AVE_ITEMS_IN_STOCK_PER_WAREHOUSE;
+
+        return gauss;
+    }
 
 }
