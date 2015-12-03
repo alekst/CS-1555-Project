@@ -42,6 +42,7 @@ public class DBLoader
     private final int NAME_MAX = 15;
     private final int MAX_SOLD = 15000;
     private final int MAX_PRICE = 50;
+    private HashMap<Integer, Float> itemCost;
 
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
@@ -130,6 +131,9 @@ public class DBLoader
     	// populate the tables with generated data
     	populateTables();
 
+
+
+
         ///////////////////////////////////////
         // Loop to ask user for function input
         ///////////////////////////////////////
@@ -149,7 +153,35 @@ public class DBLoader
 
             if (answer.toUpperCase().equals("C"))
             {
+                try
+                {
+                    System.out.print("Enter the warehouse ID: ");
+                    int warehouseNum = Integer.parseInt(scan.nextLine());
+                    System.out.print("Enter the station ID: ");
+                    int stationNum = Integer.parseInt(scan.nextLine());
+                    System.out.print("Enter the customer ID: ");
+                    int customerNum = Integer.parseInt(scan.nextLine());
+                    System.out.print("How many items in the order?: ");
+                    int itemNum = Integer.parseInt(scan.nextLine());
 
+                    int[] items = new int[itemNum];
+                    int[] counts = new int[itemNum];
+
+                    for (int i = 0; i < itemNum; i++)
+                    {
+                        System.out.print("Item ID: ");
+                        items[i] = Integer.parseInt(scan.nextLine());
+                        System.out.print("Item count: ");
+                        counts[i] = Integer.parseInt(scan.nextLine());
+                    }
+
+                    newOrder(warehouseNum, stationNum, customerNum, items, counts, itemNum);
+                }
+                catch (NumberFormatException e)
+                {
+                    System.out.println("Error parsing input. " + e.toString());
+                    System.exit(1);
+                }
             }
             else if (answer.toUpperCase().equals("P"))
             {
@@ -519,7 +551,7 @@ public class DBLoader
         // this enables us to update the counts without querying the database
         HashMap<Integer, Integer> ytdSoldCounts = new HashMap<Integer, Integer>();
         HashMap<Integer, Integer> itemOrderCounts = new HashMap<Integer, Integer>();
-        HashMap<Integer, Float> itemCost = new HashMap<Integer, Float>();
+        itemCost = new HashMap<Integer, Float>();
         try
         {
             // generate the items
@@ -592,7 +624,7 @@ public class DBLoader
                                 insertLineItems.setInt(5, itemID);
                                 insertLineItems.setInt(6, itemCount);
                                 insertLineItems.setString(7, twoDecimals(lineTotal));
-                                insertLineItems.setInt(8, getDate(rand, theDate));
+                                insertLineItems.setString(8, getDate(rand, theDate));
                                 insertLineItems.addBatch();
                             }
 
@@ -723,14 +755,59 @@ public class DBLoader
     * @param customer int containing the customer_id for the new order
     * @param items int array containing the item numbers in the order
     * @param counts int array containing the item counts in the order
-    * @param totalCount int containing the total number of individual items ordered
+    * @param totalCount int containing the total number of line items
     */
-    public void newOrder(int warehouse, int station, int customer, int[] items, int[] counts, int totalCount)
+    public void newOrder(int warehouse, int station, int customer, int[] items, int[] counts, int totalItems)
     {
+        Random rand = new Random(System.nanoTime());
         String addOrderString = "insert into Orders (customer_id, station_id, warehouse_id, order_date, completed, line_item_count)" +
             "values (?, ?, ?, ?, ?, ?)";
         String addLineItemString = "insert into LineItems (order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)" +
             " values (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try
+        {
+            // prepare the statements
+            PreparedStatement addOrder = con.prepareStatement(addOrderString);
+            PreparedStatement addLineItem = con.prepareStatement(addLineItemString);
+
+            // set the fields in the addOrder statement
+            addOrder.setInt(1, customer);
+            addOrder.setInt(2, station);
+            addOrder.setInt(3, warehouse);
+            addOrder.setString(4, getDate(rand));
+            addOrder.setInt(5, 0);
+            addOrder.setInt(6, totalItems);
+
+
+
+            // iterate through items array and prepare the lineItem batch
+            for (int i = 0; i < items.length; i++)
+            {
+                float lineTotal = itemCost.get(items[i]).floatValue() * counts[i];
+
+                addLineItem.setInt(1, 5000000);  // fix me please
+                addLineItem.setInt(2, customer);
+                addLineItem.setInt(3, station);
+                addLineItem.setInt(4, warehouse);
+                addLineItem.setInt(5, items[i]);
+                addLineItem.setInt(6, counts[i]);
+                addLineItem.setString(7, twoDecimals(lineTotal));
+                addLineItem.setString(8, "");
+                addLineItem.addBatch();
+            }
+
+            // execute the statements
+            addOrder.execute();
+            addLineItem.execute();
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error inserting order. " + e.toString());
+            System.exit(1);
+        }
+
+
     }
 
 	/*
@@ -1090,7 +1167,7 @@ public class DBLoader
         gauss = gauss + 1.0;
         gauss = gauss + AVE_ITEMS_IN_STOCK_PER_WAREHOUSE;
 
-        return gauss;
+        return (int)Math.round(gauss);
     }
 
 }
