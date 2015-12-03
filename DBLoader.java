@@ -816,17 +816,112 @@ public class DBLoader
 	public void processPayment(int customer_id, int station_id, BigDecimal payment) 
 	{
 		System.out.println("Starting to process payment transaction for customer " + customer_id + "of station " + station_id);
+		try 
+		{
+			String startTransactionString = "set transaction read write";
+			PreparedStatement startTransaction = con.prepareStatement(startTransactionString);
+			startTransaction.execute();
+			System.out.println("Starting the transaction");
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error starting the transation");
+			System.exit(1);
+		}
+		decrimentBalance(customer_id, station_id, payment);
 		System.out.println("Updating balance");
-		updateBalance(customer_id, station_id, payment);
 		updatePaidAmount(customer_id, station_id, payment);
+		System.out.println("Updating paid amount");
 		updateTotalPayments(customer_id, station_id);
+		System.out.println("Updating total payments");
+		try
+		{
+			String commitString = "commit";
+			PreparedStatement commit = con.prepareStatement(commitString);
+			commit.execute();
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error committing the transaction");
+			System.exit(1);
+		}
+	}
+	
+	/*
+	* Order status transaction 
+	* @param customer_id, station_id
+	* returns the table of the order status
+	*/
+	public void getOrderStatus(int customer_id, int station_id)
+	{
+		try 
+		{
+			System.out.println("Getting order status for " + customer_id + "from the station " + station_id); //mostly for debugging purposes
+			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where customer_id = ? and station_id = ?";
+			PreparedStatement getOrderStatus = con.prepareStatement(orderStatusString);
+			getOrderStatus.execute();
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error getting the order status");
+			System.exit(1);
+		}
+		
+	}
+	
+	public void getDeliveryTransaction(int warehouse_id)
+	{
+		/**
+		* 
+		* 1. flip the completed flag to 1 where it was zero for the warehouse = warehouse_id 
+		* 2. get the unique customer (customer_id and station_id combo)
+		* 3. adjust the balance in the unique customer (incrementBalance)
+		* 4. increment total_deliveries (updateDeliveries)
+		* TODO: is inventory going down with the delivery? or when an item is ordered? 
+		**/
+			
+		
+	}
+	
+	public void incrementBalance(int customer_id, int station_id, BigDecimal charge)
+	{
+		
+		try {
+			String incrementBalanceString = "update Customers set balance = balance + ? where customer_id = ? and station_id = ?";
+			PreparedStatement incrementBalance = con.prepareStatement(updateBalanceString);
+			incrementBalance.setBigDecimal(1, payment);
+			incrementBalance.setInt(2, customer_id);
+			incrementBalance.setInt(3, station_id);
+			incrementBalance.executeUpdate();
+		} 
+		catch (SQLException e)
+		{
+			System.out.println("Error adding the charge to the balance");
+			System.exit(1);
+		}
+	}
+	
+	public void updateDeliveries(int customer_id, int station_id)
+	{
+		try {
+			String updateDeliveriesString = "update Customers set total_deliveries = total_deliveries + 1 where customer_id = ? and station_id = ?";
+			PreparedStatement updateDeliveries = con.prepareStatement(updateDeliveriesString);
+			updateDeliveries.setInt(1, customer_id);
+			updateDeliveries.setInt(2, station_id);
+			updateDeliveries.executeUpdate();
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error updating total deliveries");
+			System.exit(1);
+		}
 	}
 	
 	/**
 	* Updates the outstanding balance based on the payment amount
 	* @param customer_id, station_id and payment
 	*/
-	public void updateBalance(int customer_id, int station_id, BigDecimal payment)
+	public void decrementBalance(int customer_id, int station_id, BigDecimal payment)
 	{
 		
 		try {
@@ -882,6 +977,8 @@ public class DBLoader
 			System.exit(1);
 		}
 	}
+	
+	
     
 
     /**
