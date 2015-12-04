@@ -25,12 +25,15 @@ import java.util.Random;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Date;
+import java.util.Calendar;
 
 public class DBLoader
 {
 	private Statement statement;
 	private PreparedStatement preparedStatement;
 	private Connection con;
+	private ResultSet resultSet;
     private String server;
 	private String username;
 	private String password;
@@ -87,6 +90,7 @@ public class DBLoader
 
         // ask the user if they want to switch databases
         System.out.println("\nWelcome to the database loader!");
+		System.out.println("Today is " + addTodaysDate());
         System.out.println("\nThe default database is : " + SERVER_ADDR);
         System.out.print("Do you want to switch to a different database? (y/n): ");
         String answer = scan.nextLine();
@@ -843,11 +847,30 @@ public class DBLoader
 		
 	}
 	
-	public void getDeliveryTransaction(int warehouse_id)
+	public void getDeliveryTransaction(int warehouse_id) 
 	{
+		java.sql.Date sqlDate = new java.sql.Date(addTodaysDate().getTime());
+		try {
+				String theDeliveredString = "select customer_id, station_id from Orders where completed =? and warehouse_id = ?";
+				PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
+				theDelivered.setInt(1, 0);
+				theDelivered.setInt(2, warehouse_id);
+				resultSet = theDelivered.execute();
+				while (resultSet.next())
+				 {
+					 //set all delivereds to zero by taking customer_id and station_id			
+			 	 }
+			 }
+			 catch(SQLException e)
+			 {
+				 System.out.println("Error running the delivery transaction");
+				 System.exit(1);
+			 }
+		
 		/**
-		* 
-		* 1. flip the completed flag to 1 where it was zero for the warehouse = warehouse_id 
+		* 1. Find all tuples in the warehouse where delivered was 0;  
+		* 2. flip the completed flag;
+			a. Add the delivery_date to LineItems 
 		* 2. get the unique customer (customer_id and station_id combo)
 		* 3. adjust the balance in the unique customer (incrementBalance)
 		* 4. increment total_deliveries (updateDeliveries)
@@ -855,6 +878,23 @@ public class DBLoader
 		**/
 			
 		
+	}
+	
+	public Date addTodaysDate()
+	{
+		Date date = Calendar.getInstance().getTime();
+		// java.sql.Date sqlDate = new java.sql.Date(date.getTime());
+// 		System.out.println(date);
+// 		System.out.println("sqldate is " + sqlDate);
+		return date;
+	}
+	
+	public void flipDelivered(int warehouse_id, int customer_id, int station_id)
+	{
+		try 
+		{
+			String // sql command to set the delivered to 0
+		}
 	}
 	
 	public void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge)
