@@ -800,7 +800,7 @@ public class DBLoader
                 addLineItem.addBatch();
 
                 // decrement stock value of the station the item
-                
+
             }
 
             // execute the statements
@@ -987,6 +987,19 @@ public class DBLoader
 			System.exit(1);
 		}
 	}
+
+
+    /**
+    * Returns a count of the number of stocked items in the passed station's 20 most recent orders
+    * are under the passed threshold
+    * @param station int containing the stationID
+    * @param threshold int containing the count threshold
+    * @return int containing the number of items in the last 20 orders which fall below the threshold
+    */
+    public int stockLevel(int station, int threshold)
+    {
+        String getLast20 = "select item_id from LineItems where order_id > ?";
+    }
 	
 	
     
