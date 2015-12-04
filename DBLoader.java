@@ -15,6 +15,7 @@
 
 import java.sql.*;
 import java.math.*;
+import java.text.DecimalFormat;
 import java.io.FileInputStream;
 import java.util.Scanner;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import java.io.Console;
 import java.util.Random;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class DBLoader
 {
@@ -187,11 +189,35 @@ public class DBLoader
             }
             else if (answer.toUpperCase().equals("P"))
             {
-
+				try
+				{
+					System.out.print("Enter the warehouse ID: ");
+					int warehouse = Integer.parseInt(scan.nextLine());
+					System.out.print("Enter the customer ID: ");
+					int customer = Integer.parseInt(scan.nextLine());
+					System.out.print("Enter the station ID: ");
+					int station = Integer.parseInt(scan.nextLine());
+					System.out.print("Enter the payment amount: ");
+					String ans = scan.nextLine();
+					BigDecimal payment = new BigDecimal(ans);
+					processPayment(warehouse, customer, station, payment);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Error parsing input. " + e.toString());
+					System.exit(1);
+				}
+				
             }
             else if (answer.toUpperCase().equals("S"))
             {
-
+				System.out.print("Enter the warehouse ID: ");
+				int warehouse = Integer.parseInt(scan.nextLine());
+				System.out.print("Enter the customer ID: ");
+				int customer = Integer.parseInt(scan.nextLine());
+				System.out.print("Enter the station ID: ");
+				int station = Integer.parseInt(scan.nextLine());
+				getOrderStatus(warehouse, station, customer);
             }
             else if (answer.toUpperCase().equals("D"))
             {
@@ -552,7 +578,7 @@ public class DBLoader
                                 insertLineItems.setString(9, getDate(rand, theDate));
                                 insertLineItems.addBatch();
                             }
-                            System.out.println("LineItems statements created.");
+                            //System.out.println("LineItems statements created.");
 
                             insertOrders.setInt(1, l);
                             insertOrders.setInt(2, currCustomerID);
@@ -564,7 +590,7 @@ public class DBLoader
                             insertOrders.addBatch();
 
                         }
-                        System.out.println("Orders statements created.");
+                        //System.out.println("Orders statements created.");
 
                         float balance = getPrice(rand, customerTotal);
 
@@ -588,7 +614,7 @@ public class DBLoader
                         insertCustomers.addBatch();
                         stationTotal += customerTotal;
                     }
-                    System.out.println("Customers statements created.");
+                    //System.out.println("Customers statements created.");
 
                     insertStations.setInt(1, currStationID);
                     insertStations.setInt(2, currWarehouseID);
@@ -602,7 +628,7 @@ public class DBLoader
                     insertStations.addBatch();
                     warehouseTotal += stationTotal;
                 }
-                System.out.println("Stations statements created.");
+                //System.out.println("Stations statements created.");
 
                 insertWarehouses.setInt(1, currWarehouseID);
                 insertWarehouses.setString(2, getName(rand));
@@ -615,7 +641,7 @@ public class DBLoader
                 insertWarehouses.addBatch();
 
             }
-            System.out.println("Warehouses statements created.");
+            //System.out.println("Warehouses statements created.");
         }
         catch (SQLException e)
         {
@@ -755,9 +781,9 @@ public class DBLoader
 	/*
     * processes the Payment, updates appropriate tuples, uses BigDecimal for payment as it is recommended to be used with currencies
     */
-	public void processPayment(int customer_id, int station_id, BigDecimal payment) 
+	public void processPayment(int warehouse_id, int customer_id, int station_id, BigDecimal payment) 
 	{
-		System.out.println("Starting to process payment transaction for customer " + customer_id + "of station " + station_id);
+		System.out.println("Starting to process payment transaction for customer " + customer_id + " of station " + station_id);
 		try 
 		{
 			String startTransactionString = "set transaction read write";
@@ -770,12 +796,14 @@ public class DBLoader
 			System.out.println("Error starting the transation");
 			System.exit(1);
 		}
-		decrementBalance(customer_id, station_id, payment);
+		decrementBalance(warehouse_id, customer_id, station_id, payment);
 		System.out.println("Updating balance");
-		updatePaidAmount(customer_id, station_id, payment);
+		updatePaidAmount(warehouse_id, customer_id, station_id, payment);
 		System.out.println("Updating paid amount");
-		updateTotalPayments(customer_id, station_id);
+		updateTotalPayments(warehouse_id, customer_id, station_id);
 		System.out.println("Updating total payments");
+		updateYTDSales(warehouse_id, station_id, payment);
+		System.out.println("Updating year to date sales");
 		try
 		{
 			String commitString = "commit";
@@ -794,13 +822,17 @@ public class DBLoader
 	* @param customer_id, station_id
 	* returns the table of the order status
 	*/
-	public void getOrderStatus(int customer_id, int station_id)
+	public void getOrderStatus(int warehouse_id, int station_id, int customer_id)
 	{
 		try 
 		{
-			System.out.println("Getting order status for " + customer_id + "from the station " + station_id); //mostly for debugging purposes
-			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where customer_id = ? and station_id = ?";
+			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes
+			// get the most recent order here
+			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and customer_id = ? and station_id = ?";
 			PreparedStatement getOrderStatus = con.prepareStatement(getOrderStatusString);
+			getOrderStatus.setInt(1, warehouse_id);
+			getOrderStatus.setInt(2, station_id);
+			getOrderStatus.setInt(3, customer_id);
 			getOrderStatus.execute();
 		}
 		catch (SQLException e)
@@ -825,7 +857,7 @@ public class DBLoader
 		
 	}
 	
-	public void incrementBalance(int customer_id, int station_id, BigDecimal charge)
+	public void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge)
 	{
 		
 		try {
@@ -843,7 +875,7 @@ public class DBLoader
 		}
 	}
 	
-	public void updateDeliveries(int customer_id, int station_id)
+	public void updateDeliveries(int warehouse_id, int customer_id, int station_id)
 	{
 		try {
 			String updateDeliveriesString = "update Customers set total_deliveries = total_deliveries + 1 where customer_id = ? and station_id = ?";
@@ -863,7 +895,7 @@ public class DBLoader
 	* Updates the outstanding balance based on the payment amount
 	* @param customer_id, station_id and payment
 	*/
-	public void decrementBalance(int customer_id, int station_id, BigDecimal payment)
+	public void decrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal payment)
 	{
 		
 		try {
@@ -884,7 +916,7 @@ public class DBLoader
 	/**
 	* Updates the amount paid for the year 
 	*/
-	public void updatePaidAmount(int customer_id, int station_id, BigDecimal payment)
+	public void updatePaidAmount(int warehouse_id, int customer_id, int station_id, BigDecimal payment)
 	{
 		try {
 			String updatePaidAmountString = "update Customers set paid_amount = paid_amount + ? where customer_id = ? and station_id = ?";
@@ -902,9 +934,42 @@ public class DBLoader
 	}
 	
 	/**
+	*	Triggers to updates the year to date sales in a warehouse and in a station
+	*/
+
+	public void updateYTDSales(int warehouse_id, int station_id, BigDecimal amount)
+		{
+
+			HashMap<String, String> data = new HashMap<String, String>();
+			data.put("Warehouses", "warehouse_id");
+			data.put("Stations", "station_id");
+			try {
+				Iterator<String> keySetIterator = data.keySet().iterator();
+				while(keySetIterator.hasNext())
+					{
+						String key = keySetIterator.next();
+						String updateYTDSalesString = "update " + key + " set sum_sales = sum_sales + ? where " + data.get(key) + " = ?";
+						PreparedStatement updateYTDSales = con.prepareStatement(updateYTDSalesString);
+						updateYTDSales.setBigDecimal(1, amount);
+						if (data.get(key).compareTo("warehouse_id") == 0)
+							updateYTDSales.setInt(2, warehouse_id);
+						else if (data.get(key).compareTo("station_id") == 0)
+							updateYTDSales.setInt(2, station_id);
+						updateYTDSales.executeUpdate();
+					}
+
+			}
+			catch (SQLException e)
+			{
+				System.out.println("Error updating year to date sales");
+				System.exit(1);
+			}
+		}
+	
+	/**
 	* Increments number of payments made for a customer 
 	*/
-	public void updateTotalPayments(int customer_id, int station_id)
+	public void updateTotalPayments(int warehouse_id, int customer_id, int station_id)
 	{
 		try {
 			String updateTotalPaymentsString = "update Customers set total_payments = total_payments + 1 where customer_id = ? and station_id = ?";
@@ -1234,3 +1299,5 @@ public class DBLoader
     }
 
 }
+
+
