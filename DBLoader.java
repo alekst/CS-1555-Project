@@ -49,7 +49,7 @@ public class DBLoader
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
     private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 3000;
+    private int CUSTOMERS_PER_STATION = 30;
     private int ITEMS = 10000;
     private final int MAX_ORDERS_PER_CUSTOMER = 100;
     private final int MIN_LINE_ITEMS_PER_ORDER = 5;
@@ -266,42 +266,42 @@ public class DBLoader
         String createLineItemsSequence = "create sequence LineItemsSequence start with 1 increment by 1";
         String createItemsSequence = "create sequence ItemsSequence start with 1 increment by 1";
 
-        dropStatements[6] = "drop trigger WarehousesSequenceTrigger";
-        dropStatements[7] = "drop trigger StationsSequenceTrigger";
-        dropStatements[8] = "drop trigger CustomersSequenceTrigger";
-        dropStatements[9] = "drop trigger OrdersSequenceTrigger";
-        dropStatements[10] = "drop trigger LineItemsSequenceTrigger";
-        dropStatements[11] = "drop trigger ItemsSequenceTrigger";
+        dropStatements[6] = "drop trigger WarehousesSequenceTrig";
+        dropStatements[7] = "drop trigger StationsSequenceTrig";
+        dropStatements[8] = "drop trigger CustomersSequenceTrig";
+        dropStatements[9] = "drop trigger OrdersSequenceTrig";
+        dropStatements[10] = "drop trigger LineItemsSequenceTrig";
+        dropStatements[11] = "drop trigger ItemsSequenceTrig";
 
-        String createWarehousesSequenceTrigger = "create trigger WarehousesSequenceTrigger" +
-            "before insert on Warehouses referencing new as new for each row" +
-            "begin" +
-            "select WarehousesSequence.nextval into :new.warehouse_id from dual;" +
+        String createWarehousesSequenceTrigger = "create trigger WarehousesSequenceTrig " +
+            "before insert on Warehouses referencing new as new for each row " +
+            "begin " +
+            "select WarehousesSequence.nextval into :new.warehouse_id from dual; " +
             "end;";
-        String createStationsSequenceTrigger = "create trigger StationsSequenceTrigger" +
-            "before insert on Stations referencing new as new for each row" +
-            "begin" +
-            "select StationsSequence.nextval into :new.station_id from dual;" +
+        String createStationsSequenceTrigger = "create trigger StationsSequenceTrig " +
+            "before insert on Stations referencing new as new for each row " +
+            "begin " +
+            "select StationsSequence.nextval into :new.station_id from dual; " +
             "end;";
-        String createCustomersSequenceTrigger = "create trigger CustomersSequenceTrigger" +
-            "before insert on Customers referencing new as new for each row" +
-            "begin" +
-            "select CustomersSequence.nextval into :new.customer_id from dual;" +
+        String createCustomersSequenceTrigger = "create trigger CustomersSequenceTrig " +
+            "before insert on Customers referencing new as new for each row " +
+            "begin " +
+            "select CustomersSequence.nextval into :new.customer_id from dual; " +
             "end;";
-        String createOrdersSequenceTrigger = "create trigger OrdersSequenceTrigger" +
-            "before insert on Orders referencing new as new for each row" +
-            "begin" +
-            "select OrdersSequence.nextval into :new.order_id from dual;" +
+        String createOrdersSequenceTrigger = "create trigger OrdersSequenceTrig " +
+            "before insert on Orders referencing new as new for each row " +
+            "begin " +
+            "select OrdersSequence.nextval into :new.order_id from dual; " +
             "end;";
-        String createLineItemsSequenceTrigger = "create trigger LineItemsSequenceTrigger" +
-            "before insert on LineItems referencing new as new for each row" +
-            "begin" +
-            "select LineItemsSequence.nextval into :new.line_id from dual;" +
+        String createLineItemsSequenceTrigger = "create trigger LineItemsSequenceTrig " +
+            "before insert on LineItems referencing new as new for each row " +
+            "begin " +
+            "select LineItemsSequence.nextval into :new.line_id from dual; " +
             "end;";
-        String createItemsSequenceTrigger = "create trigger ItemsSequenceTrigger" +
-            "before insert on Items referencing new as new for each row" +
-            "begin" +
-            "select ItemsSequence.nextval into :new.item_id from dual;" +
+        String createItemsSequenceTrigger = "create trigger ItemsSequenceTrig " +
+            "before insert on Items referencing new as new for each row " +
+            "begin " +
+            "select ItemsSequence.nextval into :new.item_id from dual; " +
             "end;";
 
 
@@ -451,22 +451,6 @@ public class DBLoader
             System.exit(1);
         }
 
-        // create the sequence triggers
-        try
-        {
-            statement.executeUpdate(createWarehousesSequenceTrigger);
-            statement.executeUpdate(createStationsSequenceTrigger);
-            statement.executeUpdate(createCustomersSequenceTrigger);
-            statement.executeUpdate(createOrdersSequenceTrigger);
-            statement.executeUpdate(createLineItemsSequenceTrigger);
-            statement.executeUpdate(createItemsSequenceTrigger);
-        }
-        catch (SQLException e)
-        {
-            System.out.println("Error creating sequence triggers. " + e.toString());
-            System.exit(1);
-        }
-
         // create the tables
 		try {
 			statement.executeUpdate(startTransaction);
@@ -492,7 +476,25 @@ public class DBLoader
 		}
 
         System.out.println("Tables successfully created.");
+
+
+        // create the sequence triggers
+        try
+        {
+            statement.executeUpdate(createWarehousesSequenceTrigger);
+            statement.executeUpdate(createStationsSequenceTrigger);
+            statement.executeUpdate(createCustomersSequenceTrigger);
+            statement.executeUpdate(createOrdersSequenceTrigger);
+            statement.executeUpdate(createLineItemsSequenceTrigger);
+            statement.executeUpdate(createItemsSequenceTrigger);
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error creating sequence triggers. " + e.toString());
+            System.exit(1);
+        }
     }
+
 
 
     /**
@@ -567,6 +569,7 @@ public class DBLoader
                 insertItems.setString(2, twoDecimals(cost));
                 insertItems.addBatch();
             }
+            System.out.println("Items statements created.");
 
             // generate the warehouses
             for (currWarehouseID = 1; currWarehouseID <= WAREHOUSES; currWarehouseID++)
@@ -580,12 +583,14 @@ public class DBLoader
                     ytdSoldCounts.put(j, 0);
                     itemOrderCounts.put(j, 0);
 
-                    insertStockItems.setInt(1, currWarehouseID);
-                    insertStockItems.setInt(2, randomMean(rand));
-                    insertStockItems.setString(3, "0");
+                    insertStockItems.setInt(1, j);
+                    insertStockItems.setInt(2, currWarehouseID);
+                    insertStockItems.setInt(3, randomMean(rand));
                     insertStockItems.setString(4, "0");
+                    insertStockItems.setString(5, "0");
                     insertStockItems.addBatch();
                 }
+                System.out.println("StockItems statements created.");
 
                 // generate the stations
                 for (currStationID = 1; currStationID <= STATIONS_PER_WAREHOUSE; currStationID++)
@@ -630,6 +635,7 @@ public class DBLoader
                                 insertLineItems.setString(8, getDate(rand, theDate));
                                 insertLineItems.addBatch();
                             }
+                            System.out.println("LineItems statements created.");
 
                             insertOrders.setInt(1, currCustomerID);
                             insertOrders.setInt(2, currStationID);
@@ -640,6 +646,7 @@ public class DBLoader
                             insertOrders.addBatch();
 
                         }
+                        System.out.println("Orders statements created.");
 
                         float balance = getPrice(rand, customerTotal);
                         insertCustomers.setInt(1, currStationID);
@@ -661,6 +668,7 @@ public class DBLoader
                         insertCustomers.addBatch();
                         stationTotal += customerTotal;
                     }
+                    System.out.println("Customers statements created.");
 
                     insertStations.setInt(1, currWarehouseID);
                     insertStations.setString(2, getName(rand));
@@ -673,6 +681,7 @@ public class DBLoader
                     insertStations.addBatch();
                     warehouseTotal += stationTotal;
                 }
+                System.out.println("Stations statements created.");
 
                 insertWarehouses.setString(1, getName(rand));
                 insertWarehouses.setString(2, getAddress(rand));
@@ -684,6 +693,7 @@ public class DBLoader
                 insertWarehouses.addBatch();
 
             }
+            System.out.println("Warehouses statements created.");
         }
         catch (SQLException e)
         {
@@ -999,6 +1009,7 @@ public class DBLoader
     public int stockLevel(int station, int threshold)
     {
         String getLast20 = "select item_id from LineItems where order_id > ?";
+        return 0;
     }
 	
 	
@@ -1148,9 +1159,19 @@ public class DBLoader
         int dayRange = 31 - day;
 
         // compute the random date
-        int newYear = year + rand.nextInt(yearRange);
-        int newMonth = month + rand.nextInt(monthRange) + 1;
-        int newDay = day + rand.nextInt(dayRange) + 1;
+        int newYear, newMonth, newDay;
+        if (yearRange == 0)
+            newYear = year;
+        else
+            newYear = year + rand.nextInt(yearRange);
+        if (monthRange == 0)
+            newMonth = month;
+        else
+            newMonth = month + rand.nextInt(monthRange) + 1;
+        if (dayRange == 0)
+            newDay = day;
+        else
+            newDay = day + rand.nextInt(dayRange) + 1;
 
         // correct for any date errors
         if (newMonth > 12)
