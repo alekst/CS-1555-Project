@@ -43,7 +43,7 @@ public class DBLoader
     private final int MAX_SOLD = 15000;
     private final int MAX_PRICE = 50;
     private HashMap<Integer, Float> itemCost;
-    private currWarehouseID, currStationID, currCustomerID;
+    private int currWarehouseID, currStationID, currCustomerID;
     private HashMap<Integer, Integer> currOrderID = new HashMap<Integer, Integer>();
 
     // constants defining the amount of data to generate
@@ -593,7 +593,7 @@ public class DBLoader
                     stationTotal = 0;
 
                     // generate the customers
-                    for (currCustomerID) = 1; currCustomerID <= CUSTOMERS_PER_STATION; currCustomerID++)
+                    for (currCustomerID = 1; currCustomerID <= CUSTOMERS_PER_STATION; currCustomerID++)
                     {
                         customerTotal = 0;
 
@@ -838,7 +838,7 @@ public class DBLoader
 			System.out.println("Error starting the transation");
 			System.exit(1);
 		}
-		decrimentBalance(customer_id, station_id, payment);
+		decrementBalance(customer_id, station_id, payment);
 		System.out.println("Updating balance");
 		updatePaidAmount(customer_id, station_id, payment);
 		System.out.println("Updating paid amount");
@@ -868,7 +868,7 @@ public class DBLoader
 		{
 			System.out.println("Getting order status for " + customer_id + "from the station " + station_id); //mostly for debugging purposes
 			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where customer_id = ? and station_id = ?";
-			PreparedStatement getOrderStatus = con.prepareStatement(orderStatusString);
+			PreparedStatement getOrderStatus = con.prepareStatement(getOrderStatusString);
 			getOrderStatus.execute();
 		}
 		catch (SQLException e)
@@ -887,7 +887,7 @@ public class DBLoader
 		* 2. get the unique customer (customer_id and station_id combo)
 		* 3. adjust the balance in the unique customer (incrementBalance)
 		* 4. increment total_deliveries (updateDeliveries)
-		* TODO: is inventory going down with the delivery? or when an item is ordered? 
+		*  
 		**/
 			
 		
@@ -898,8 +898,8 @@ public class DBLoader
 		
 		try {
 			String incrementBalanceString = "update Customers set balance = balance + ? where customer_id = ? and station_id = ?";
-			PreparedStatement incrementBalance = con.prepareStatement(updateBalanceString);
-			incrementBalance.setBigDecimal(1, payment);
+			PreparedStatement incrementBalance = con.prepareStatement(incrementBalanceString);
+			incrementBalance.setBigDecimal(1, charge);
 			incrementBalance.setInt(2, customer_id);
 			incrementBalance.setInt(3, station_id);
 			incrementBalance.executeUpdate();
@@ -1197,7 +1197,7 @@ public class DBLoader
         // parse the date
         String[] splitDate = date.split("-");
 
-        int oldYear, oldMonth, oldDay;
+        int oldYear = 0, oldMonth = 0, oldDay = 0;
         try
         {
             oldYear = Integer.parseInt(splitDate[0]);
