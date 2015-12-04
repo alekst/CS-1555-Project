@@ -250,62 +250,9 @@ public class DBLoader
     {
 		System.out.println("creating tables...");
 		String startTransaction = "SET TRANSACTION READ WRITE";
-        String[] dropStatements = new String[19];
+        String[] dropStatements = new String[7];
 
-        dropStatements[0] = "drop sequence WarehousesSequence";
-        dropStatements[1] = "drop sequence StationsSequence";
-        dropStatements[2] = "drop sequence CustomersSequence";
-        dropStatements[3] = "drop sequence OrdersSequence";
-        dropStatements[4] = "drop sequence LineItemsSequence";
-        dropStatements[5] = "drop sequence ItemsSequence";
-
-        String createWarehousesSequence = "create sequence WarehousesSequence start with 1 increment by 1";
-        String createStationsSequence = "create sequence StationsSequence start with 1 increment by 1";
-        String createCustomersSequence = "create sequence CustomersSequence start with 1 increment by 1";
-        String createOrdersSequence = "create sequence OrdersSequence start with 1 increment by 1";
-        String createLineItemsSequence = "create sequence LineItemsSequence start with 1 increment by 1";
-        String createItemsSequence = "create sequence ItemsSequence start with 1 increment by 1";
-
-        dropStatements[6] = "drop trigger WarehousesSequenceTrig";
-        dropStatements[7] = "drop trigger StationsSequenceTrig";
-        dropStatements[8] = "drop trigger CustomersSequenceTrig";
-        dropStatements[9] = "drop trigger OrdersSequenceTrig";
-        dropStatements[10] = "drop trigger LineItemsSequenceTrig";
-        dropStatements[11] = "drop trigger ItemsSequenceTrig";
-
-        String createWarehousesSequenceTrigger = "create trigger WarehousesSequenceTrig " +
-            "before insert on Warehouses referencing new as new for each row " +
-            "begin " +
-            "select WarehousesSequence.nextval into :new.warehouse_id from dual; " +
-            "end;";
-        String createStationsSequenceTrigger = "create trigger StationsSequenceTrig " +
-            "before insert on Stations referencing new as new for each row " +
-            "begin " +
-            "select StationsSequence.nextval into :new.station_id from dual; " +
-            "end;";
-        String createCustomersSequenceTrigger = "create trigger CustomersSequenceTrig " +
-            "before insert on Customers referencing new as new for each row " +
-            "begin " +
-            "select CustomersSequence.nextval into :new.customer_id from dual; " +
-            "end;";
-        String createOrdersSequenceTrigger = "create trigger OrdersSequenceTrig " +
-            "before insert on Orders referencing new as new for each row " +
-            "begin " +
-            "select OrdersSequence.nextval into :new.order_id from dual; " +
-            "end;";
-        String createLineItemsSequenceTrigger = "create trigger LineItemsSequenceTrig " +
-            "before insert on LineItems referencing new as new for each row " +
-            "begin " +
-            "select LineItemsSequence.nextval into :new.line_id from dual; " +
-            "end;";
-        String createItemsSequenceTrigger = "create trigger ItemsSequenceTrig " +
-            "before insert on Items referencing new as new for each row " +
-            "begin " +
-            "select ItemsSequence.nextval into :new.item_id from dual; " +
-            "end;";
-
-
-		dropStatements[12] = "drop table Warehouses cascade constraints";
+		dropStatements[0] = "drop table Warehouses cascade constraints";
 		String createWarehouses = "create table Warehouses (" +
 			"warehouse_id number(3) not null, " + 
 			"name varchar2(20), " +
@@ -318,7 +265,7 @@ public class DBLoader
 			"constraint Warehouses_pk primary key(warehouse_id) )";
 		
 
-		dropStatements[13] = "drop table Stations cascade constraints";
+		dropStatements[1] = "drop table Stations cascade constraints";
 		String createStations = "create table Stations (" +
 			"station_id number(3) not null, " +
 			"warehouse_id number(3) not null, " +
@@ -333,7 +280,7 @@ public class DBLoader
 			"constraint Stations_fk foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 	
 
-		dropStatements[14] = "drop table Customers cascade constraints";
+		dropStatements[2] = "drop table Customers cascade constraints";
 		String createCustomers = "create table Customers (" +
 			"customer_id number(6) not null, " +
 			"station_id number(3) not null, " +
@@ -356,7 +303,7 @@ public class DBLoader
 			"constraint Customers_fk foreign key(station_id, warehouse_id) references Stations(station_id, warehouse_id) )";
 		
 
-		dropStatements[15] = "drop table Orders cascade constraints";
+		dropStatements[3] = "drop table Orders cascade constraints";
 		String createOrders = "create table Orders (" +
 			"order_id number(10) not null, " +
 			"customer_id number(6), " +
@@ -369,14 +316,14 @@ public class DBLoader
 			"constraint Orders_fk1 foreign key(station_id, warehouse_id) references Stations(station_id, warehouse_id), " +
             "constraint Orders_fk2 foreign key(customer_id, station_id) references Customers(customer_id, station_id) )";
 		
-        dropStatements[16] = "drop table Items cascade constraints";
+        dropStatements[4] = "drop table Items cascade constraints";
         String createItems = "create table Items (" +
             "item_id number(15) not null, " +
             "name varchar2(20), " +
             "price number(5, 2)," +
             "constraint Items_pk primary key(item_id) )";
 		
-		dropStatements[17] = "drop table StockItems cascade constraints";
+		dropStatements[5] = "drop table StockItems cascade constraints";
 		String createStockItems = "create table StockItems (" +
 			"item_id number(15) not null, " +
             "warehouse_id number(3), " +
@@ -388,7 +335,7 @@ public class DBLoader
 			"constraint StockItems_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
 		
 
-		dropStatements[18] = "drop table LineItems cascade constraints";
+		dropStatements[6] = "drop table LineItems cascade constraints";
 		String createLineItems = "create table LineItems (" +
 			"line_id number(15) not null, " +
             "order_id number(10), " +
@@ -435,21 +382,6 @@ public class DBLoader
             System.out.println("Commitment failure.");
         }
 
-        // create the sequences
-        try
-        {
-            statement.executeUpdate(createWarehousesSequence);
-            statement.executeUpdate(createStationsSequence);
-            statement.executeUpdate(createCustomersSequence);
-            statement.executeUpdate(createOrdersSequence);
-            statement.executeUpdate(createLineItemsSequence);
-            statement.executeUpdate(createItemsSequence);
-        }
-        catch (SQLException e)
-        {
-            System.out.println("Error creating sequences. " + e.toString());
-            System.exit(1);
-        }
 
         // create the tables
 		try {
@@ -476,23 +408,6 @@ public class DBLoader
 		}
 
         System.out.println("Tables successfully created.");
-
-
-        // create the sequence triggers
-        try
-        {
-            statement.executeUpdate(createWarehousesSequenceTrigger);
-            statement.executeUpdate(createStationsSequenceTrigger);
-            statement.executeUpdate(createCustomersSequenceTrigger);
-            statement.executeUpdate(createOrdersSequenceTrigger);
-            statement.executeUpdate(createLineItemsSequenceTrigger);
-            statement.executeUpdate(createItemsSequenceTrigger);
-        }
-        catch (SQLException e)
-        {
-            System.out.println("Error creating sequence triggers. " + e.toString());
-            System.exit(1);
-        }
     }
 
 
@@ -503,18 +418,18 @@ public class DBLoader
     private void populateTables()
     {
         // define the insert statements
-        String warehousesString = "insert into Warehouses (name, address, city, state, zip, tax_rate, sum_sales)"
-        + "values (?, ?, ?, ?, ?, ?, ?)";
-        String stationsString = "insert into Stations (warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
+        String warehousesString = "insert into Warehouses (warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
         + "values (?, ?, ?, ?, ?, ?, ?, ?)";
-        String customersString = "insert into Customers (station_id, warehouse_id, fname, mi, lname, address, city, state, zip, phone, "
+        String stationsString = "insert into Stations (station_id, warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
+        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String customersString = "insert into Customers (customer_id, station_id, warehouse_id, fname, mi, lname, address, city, state, zip, phone, "
         + "join_date, discount, balance, paid_amount, total_payments, total_deliveries)"
-        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        String ordersString = "insert into Orders (customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
-        + "values (?, ?, ?, ?, ?, ?)";
-        String lineItemsString = "insert into LineItems (order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
-        + "values (?, ?, ?, ?, ?, ?, ?, ?)";
-        String itemsString = "insert into Items (name, price) values (?, ?)";
+        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String ordersString = "insert into Orders (order_id, customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
+        + "values (?, ?, ?, ?, ?, ?, ?)";
+        String lineItemsString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
+        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String itemsString = "insert into Items (item_id, name, price) values (?, ?, ?)";
         String stockItemsString = "insert into StockItems (item_id, warehouse_id, in_stock, sold_this_year, included_in_orders)"
         + "values (?, ?, ?, ?, ?)";
 
@@ -565,8 +480,9 @@ public class DBLoader
                 float cost = getPrice(rand);
                 itemCost.put(i, new Float(cost));
 
-                insertItems.setString(1, getName(rand));
-                insertItems.setString(2, twoDecimals(cost));
+                insertItems.setInt(1, i);
+                insertItems.setString(2, getName(rand));
+                insertItems.setString(3, twoDecimals(cost));
                 insertItems.addBatch();
             }
             System.out.println("Items statements created.");
@@ -625,71 +541,77 @@ public class DBLoader
                                 ytdSoldCounts.put(itemID, new Integer(ytdSoldCounts.get(itemID).intValue() + itemCount));
                                 itemOrderCounts.put(itemID, new Integer(itemOrderCounts.get(itemID).intValue() + 1));
 
-                                insertLineItems.setInt(1, l);
-                                insertLineItems.setInt(2, currCustomerID);
-                                insertLineItems.setInt(3, currStationID);
-                                insertLineItems.setInt(4, currWarehouseID);
-                                insertLineItems.setInt(5, itemID);
-                                insertLineItems.setInt(6, itemCount);
-                                insertLineItems.setString(7, twoDecimals(lineTotal));
-                                insertLineItems.setString(8, getDate(rand, theDate));
+                                insertLineItems.setInt(1, m);
+                                insertLineItems.setInt(2, l);
+                                insertLineItems.setInt(3, currCustomerID);
+                                insertLineItems.setInt(4, currStationID);
+                                insertLineItems.setInt(5, currWarehouseID);
+                                insertLineItems.setInt(6, itemID);
+                                insertLineItems.setInt(7, itemCount);
+                                insertLineItems.setString(8, twoDecimals(lineTotal));
+                                insertLineItems.setString(9, getDate(rand, theDate));
                                 insertLineItems.addBatch();
                             }
                             System.out.println("LineItems statements created.");
 
-                            insertOrders.setInt(1, currCustomerID);
-                            insertOrders.setInt(2, currStationID);
-                            insertOrders.setInt(3, currWarehouseID);
-                            insertOrders.setString(4, theDate);
-                            insertOrders.setInt(5, Math.round(rand.nextFloat()));
-                            insertOrders.setInt(6, lineCount);
+                            insertOrders.setInt(1, l);
+                            insertOrders.setInt(2, currCustomerID);
+                            insertOrders.setInt(3, currStationID);
+                            insertOrders.setInt(4, currWarehouseID);
+                            insertOrders.setString(5, theDate);
+                            insertOrders.setInt(6, Math.round(rand.nextFloat()));
+                            insertOrders.setInt(7, lineCount);
                             insertOrders.addBatch();
 
                         }
                         System.out.println("Orders statements created.");
 
                         float balance = getPrice(rand, customerTotal);
-                        insertCustomers.setInt(1, currStationID);
-                        insertCustomers.setInt(2, currWarehouseID);
-                        insertCustomers.setString(3, getName(rand));
-                        insertCustomers.setString(4, getMI(rand));
-                        insertCustomers.setString(5, getName(rand));
-                        insertCustomers.setString(6, getAddress(rand));
-                        insertCustomers.setString(7, getName(rand));
-                        insertCustomers.setString(8, getState(rand));
-                        insertCustomers.setString(9, getZip(rand));
-                        insertCustomers.setString(10, getPhone(rand));
-                        insertCustomers.setString(11, getDate(rand));
-                        insertCustomers.setString(12, getDiscount(rand));
-                        insertCustomers.setString(13, twoDecimals(balance));
-                        insertCustomers.setString(14, twoDecimals(customerTotal - balance));
-                        insertCustomers.setInt(15, rand.nextInt(20) + 1);
-                        insertCustomers.setInt(16, rand.nextInt(30) + 1);
+
+                        insertCustomers.setInt(1, currCustomerID);
+                        insertCustomers.setInt(2, currStationID);
+                        insertCustomers.setInt(3, currWarehouseID);
+                        insertCustomers.setString(4, getName(rand));
+                        insertCustomers.setString(5, getMI(rand));
+                        insertCustomers.setString(6, getName(rand));
+                        insertCustomers.setString(7, getAddress(rand));
+                        insertCustomers.setString(8, getName(rand));
+                        insertCustomers.setString(9, getState(rand));
+                        insertCustomers.setString(10, getZip(rand));
+                        insertCustomers.setString(11, getPhone(rand));
+                        insertCustomers.setString(12, getDate(rand));
+                        insertCustomers.setString(13, getDiscount(rand));
+                        insertCustomers.setString(14, twoDecimals(balance));
+                        insertCustomers.setString(15, twoDecimals(customerTotal - balance));
+                        insertCustomers.setInt(16, rand.nextInt(20) + 1);
+                        insertCustomers.setInt(17, rand.nextInt(30) + 1);
                         insertCustomers.addBatch();
                         stationTotal += customerTotal;
                     }
                     System.out.println("Customers statements created.");
 
-                    insertStations.setInt(1, currWarehouseID);
-                    insertStations.setString(2, getName(rand));
-                    insertStations.setString(3, getAddress(rand));
-                    insertStations.setString(4, getName(rand));
-                    insertStations.setString(5, getState(rand));
-                    insertStations.setString(6, getZip(rand));
-                    insertStations.setString(7, getTax(rand));
-                    insertStations.setString(8, twoDecimals(stationTotal));
+                    insertStations.setInt(1, currStationID);
+                    insertStations.setInt(2, currWarehouseID);
+                    insertStations.setString(3, getName(rand));
+                    insertStations.setString(4, getAddress(rand));
+                    insertStations.setString(5, getName(rand));
+                    insertStations.setString(6, getState(rand));
+                    insertStations.setString(7, getZip(rand));
+                    insertStations.setString(8, getTax(rand));
+                    insertStations.setString(9, twoDecimals(stationTotal));
                     insertStations.addBatch();
                     warehouseTotal += stationTotal;
                 }
                 System.out.println("Stations statements created.");
 
-                insertWarehouses.setString(1, getName(rand));
-                insertWarehouses.setString(2, getAddress(rand));
-                insertWarehouses.setString(3, getName(rand));
-                insertWarehouses.setString(4, getState(rand));
-                insertWarehouses.setString(5, getZip(rand));
-                insertWarehouses.setString(6, getTax(rand));
-                insertWarehouses.setString(7, twoDecimals(warehouseTotal));
+                insertWarehouses.setInt(1, currWarehouseID);
+                insertWarehouses.setString(2, getName(rand));
+                insertWarehouses.setString(3, getAddress(rand));
+                insertWarehouses.setString(4, getName(rand));
+                insertWarehouses.setString(5, getState(rand));
+                insertWarehouses.setString(6, getZip(rand));
+                insertWarehouses.setString(7, getTax(rand));
+                insertWarehouses.setString(8, twoDecimals(warehouseTotal));
                 insertWarehouses.addBatch();
 
             }
