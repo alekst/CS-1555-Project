@@ -43,6 +43,8 @@ public class DBLoader
     private final int MAX_SOLD = 15000;
     private final int MAX_PRICE = 50;
     private HashMap<Integer, Float> itemCost;
+    private currWarehouseID, currStationID, currCustomerID;
+    private HashMap<Integer, Integer> currOrderID = new HashMap<Integer, Integer>();
 
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
@@ -567,7 +569,7 @@ public class DBLoader
             }
 
             // generate the warehouses
-            for (int i = 1; i <= WAREHOUSES; i++)
+            for (currWarehouseID = 1; currWarehouseID <= WAREHOUSES; currWarehouseID++)
             {
                 warehouseTotal = 0;
 
@@ -578,7 +580,7 @@ public class DBLoader
                     ytdSoldCounts.put(j, 0);
                     itemOrderCounts.put(j, 0);
 
-                    insertStockItems.setInt(1, i);
+                    insertStockItems.setInt(1, currWarehouseID);
                     insertStockItems.setInt(2, randomMean(rand));
                     insertStockItems.setString(3, "0");
                     insertStockItems.setString(4, "0");
@@ -586,17 +588,18 @@ public class DBLoader
                 }
 
                 // generate the stations
-                for (int j = 1; j <= STATIONS_PER_WAREHOUSE; j++)
+                for (currStationID = 1; currStationID <= STATIONS_PER_WAREHOUSE; currStationID++)
                 {
                     stationTotal = 0;
 
                     // generate the customers
-                    for (int k = 1; k <= CUSTOMERS_PER_STATION; k++)
+                    for (currCustomerID) = 1; currCustomerID <= CUSTOMERS_PER_STATION; currCustomerID++)
                     {
                         customerTotal = 0;
 
                         // generate the orders
                         int orderNum = rand.nextInt(MAX_ORDERS_PER_CUSTOMER) + 1;
+                        currOrderID.put(currCustomerID, orderNum);          // store the current orderID sequence for the customer
                         for (int l = 1; l <= orderNum; l++)
                         {
                             // date for order placement
@@ -618,9 +621,9 @@ public class DBLoader
                                 itemOrderCounts.put(itemID, new Integer(itemOrderCounts.get(itemID).intValue() + 1));
 
                                 insertLineItems.setInt(1, l);
-                                insertLineItems.setInt(2, k);
-                                insertLineItems.setInt(3, j);
-                                insertLineItems.setInt(4, i);
+                                insertLineItems.setInt(2, currCustomerID);
+                                insertLineItems.setInt(3, currStationID);
+                                insertLineItems.setInt(4, currWarehouseID);
                                 insertLineItems.setInt(5, itemID);
                                 insertLineItems.setInt(6, itemCount);
                                 insertLineItems.setString(7, twoDecimals(lineTotal));
@@ -628,9 +631,9 @@ public class DBLoader
                                 insertLineItems.addBatch();
                             }
 
-                            insertOrders.setInt(1, k);
-                            insertOrders.setInt(2, j);
-                            insertOrders.setInt(3, i);
+                            insertOrders.setInt(1, currCustomerID);
+                            insertOrders.setInt(2, currStationID);
+                            insertOrders.setInt(3, currWarehouseID);
                             insertOrders.setString(4, theDate);
                             insertOrders.setInt(5, Math.round(rand.nextFloat()));
                             insertOrders.setInt(6, lineCount);
@@ -639,8 +642,8 @@ public class DBLoader
                         }
 
                         float balance = getPrice(rand, customerTotal);
-                        insertCustomers.setInt(1, j);
-                        insertCustomers.setInt(2, i);
+                        insertCustomers.setInt(1, currStationID);
+                        insertCustomers.setInt(2, currWarehouseID);
                         insertCustomers.setString(3, getName(rand));
                         insertCustomers.setString(4, getMI(rand));
                         insertCustomers.setString(5, getName(rand));
@@ -659,7 +662,7 @@ public class DBLoader
                         stationTotal += customerTotal;
                     }
 
-                    insertStations.setInt(1, i);
+                    insertStations.setInt(1, currWarehouseID);
                     insertStations.setString(2, getName(rand));
                     insertStations.setString(3, getAddress(rand));
                     insertStations.setString(4, getName(rand));
@@ -786,7 +789,7 @@ public class DBLoader
             {
                 float lineTotal = itemCost.get(items[i]).floatValue() * counts[i];
 
-                addLineItem.setInt(1, 5000000);  // fix me please
+                addLineItem.setInt(1, currOrderID.get(customer).intValue());
                 addLineItem.setInt(2, customer);
                 addLineItem.setInt(3, station);
                 addLineItem.setInt(4, warehouse);
@@ -795,11 +798,18 @@ public class DBLoader
                 addLineItem.setString(7, twoDecimals(lineTotal));
                 addLineItem.setString(8, "");
                 addLineItem.addBatch();
+
+                // decrement stock value of the station the item
+                
             }
 
             // execute the statements
             addOrder.execute();
             addLineItem.execute();
+
+            // update the order number for that customer
+            Integer temp = currOrderID.remove(customer);
+            currOrderID.put(customer, temp + 1);
         }
         catch (SQLException e)
         {
@@ -847,7 +857,7 @@ public class DBLoader
 		}
 	}
 	
-	/*
+	/**
 	* Order status transaction 
 	* @param customer_id, station_id
 	* returns the table of the order status
