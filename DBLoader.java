@@ -44,7 +44,7 @@ public class DBLoader
     private final int MAX_PRICE = 50;
     private HashMap<Integer, Float> itemCost;
     private int currWarehouseID, currStationID, currCustomerID;
-    private HashMap<Integer, Integer> currOrderID = new HashMap<Integer, Integer>();
+    private HashMap<String, Integer> currOrderID, currLineID;
 
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
@@ -77,6 +77,9 @@ public class DBLoader
     */
 	public DBLoader()
     {
+        currOrderID = new HashMap<String, Integer>();
+        currLineID = new HashMap<String, Integer>();
+
         ///////////////////////////////////
         // Load the data into the database
         ///////////////////////////////////
@@ -520,7 +523,7 @@ public class DBLoader
 
                         // generate the orders
                         int orderNum = rand.nextInt(MAX_ORDERS_PER_CUSTOMER) + 1;
-                        currOrderID.put(currCustomerID, orderNum);          // store the current orderID sequence for the customer
+                        currOrderID.put(getCustomerKey(currWarehouseID, currStationID, currCustomerID), orderNum + 1);          // store the current orderID sequence for the customer
                         for (int l = 1; l <= orderNum; l++)
                         {
                             // date for order placement
@@ -528,6 +531,7 @@ public class DBLoader
 
                             // generate the number of line items to put in the order
                             int lineCount = rand.nextInt((MAX_LINE_ITEMS_PER_ORDER - MIN_LINE_ITEMS_PER_ORDER) + 1) + MIN_LINE_ITEMS_PER_ORDER;
+                            currLineID.put(getOrderKey(currWarehouseID, currStationID, currCustomerID, l), lineCount + 1);      // store the current lineID sequence for the order
 
                             // generate the line items for the order
                             for (int m = 1; m <= lineCount; m++)
@@ -695,61 +699,109 @@ public class DBLoader
     public void newOrder(int warehouse, int station, int customer, int[] items, int[] counts, int totalItems)
     {
         Random rand = new Random(System.nanoTime());
-        String addOrderString = "insert into Orders (customer_id, station_id, warehouse_id, order_date, completed, line_item_count)" +
-            "values (?, ?, ?, ?, ?, ?)";
-        String addLineItemString = "insert into LineItems (order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)" +
-            " values (?, ?, ?, ?, ?, ?, ?, ?)";
+        String addOrderString = "insert into Orders (order_id, customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
+        + "values (?, ?, ?, ?, ?, ?, ?)";
+        String addLineItemString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
+        + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try
         {
             // prepare the statements
             PreparedStatement addOrder = con.prepareStatement(addOrderString);
             PreparedStatement addLineItem = con.prepareStatement(addLineItemString);
+            int thisOrderID = currOrderID.get(getCustomerKey(warehouse, station, customer)).intValue();
 
             // set the fields in the addOrder statement
-            addOrder.setInt(1, customer);
-            addOrder.setInt(2, station);
-            addOrder.setInt(3, warehouse);
-            addOrder.setString(4, getDate(rand));
-            addOrder.setInt(5, 0);
-            addOrder.setInt(6, totalItems);
+            addOrder.setInt(1, thisOrderID);
+            addOrder.setInt(2, customer);
+            addOrder.setInt(3, station);
+            addOrder.setInt(4, warehouse);
+            addOrder.setString(5, getDate(rand));
+            addOrder.setInt(6, 0);
+            addOrder.setInt(7, totalItems);
 
 
 
             // iterate through items array and prepare the lineItem batch
+            int thisLineID = 1;
             for (int i = 0; i < items.length; i++)
             {
                 float lineTotal = itemCost.get(items[i]).floatValue() * counts[i];
 
-                addLineItem.setInt(1, currOrderID.get(customer).intValue());
-                addLineItem.setInt(2, customer);
-                addLineItem.setInt(3, station);
-                addLineItem.setInt(4, warehouse);
-                addLineItem.setInt(5, items[i]);
-                addLineItem.setInt(6, counts[i]);
-                addLineItem.setString(7, twoDecimals(lineTotal));
-                addLineItem.setString(8, "");
+                addLineItem.setInt(1, thisLineID);
+                addLineItem.setInt(2, thisOrderID);
+                addLineItem.setInt(3, customer);
+                addLineItem.setInt(4, station);
+                addLineItem.setInt(5, warehouse);
+                addLineItem.setInt(6, items[i]);
+                addLineItem.setInt(7, counts[i]);
+                addLineItem.setString(8, twoDecimals(lineTotal));
+                addLineItem.setString(9, "");
                 addLineItem.addBatch();
 
-                // decrement stock value of the station the item
+                thisLineID++;
 
+                // decrement the stock values of the warehouse
+                updateStock(warehouse, items[i], counts[i]);
             }
 
             // execute the statements
             addOrder.execute();
-            addLineItem.execute();
+            addLineItem.executeBatch();
 
-            // update the order number for that customer
-            Integer temp = currOrderID.remove(customer);
-            currOrderID.put(customer, temp + 1);
+            // update the order and line numbers for that customer
+            Integer temp = currOrderID.remove(getCustomerKey(warehouse, station, customer));
+            currOrderID.put(getCustomerKey(warehouse, station, customer), temp + 1);
+            currLineID.put(getOrderKey(warehouse, station, customer, thisOrderID), thisLineID);
+
+            System.out.println("Order successfully placed");
         }
         catch (SQLException e)
         {
             System.out.println("Error inserting order. " + e.toString());
             System.exit(1);
         }
+    }
 
+    /**
+    * Decreases the stock of the passed item in the passed warehouse by count.
+    * @param warehouse int containing the warehouse_id
+    * @param item int containing the item_id
+    * @param count int containing the item count to be decremented
+    */
+    private void updateStock(int warehouse, int item, int count) throws SQLException
+    {
+        String getCountsString = "select in_stock, sold_this_year, included_in_orders " +
+            "from StockItems where item_id = ? and warehouse_id = ?";
+        
+        String updateStockString = "update StockItems set in_stock = ?, sold_this_year = ?, included_in_orders = ? " +
+            "where item_id = ? and warehouse_id = ?";
 
+        // prepare the statements
+        PreparedStatement getCounts = con.prepareStatement(getCountsString);
+        PreparedStatement updateStock = con.prepareStatement(updateStockString);
+        getCounts.setInt(1, item);
+        getCounts.setInt(2, warehouse);
+
+        // get the current counts from the database
+        ResultSet results = getCounts.executeQuery();
+        results.next();
+
+        // update the values appropriately
+        int newStock = results.getInt("in_stock");
+        int newSold = results.getInt("sold_this_year");
+        int newOrders = results.getInt("included_in_orders");
+        newStock = newStock - count;
+        newSold = newSold + count;
+        newOrders++;
+
+        // execute the update
+        updateStock.setInt(1, newStock);
+        updateStock.setInt(2, newSold);
+        updateStock.setInt(3, newOrders);
+        updateStock.setInt(4, item);
+        updateStock.setInt(5, warehouse);
+        updateStock.execute();
     }
 
 	/*
@@ -1231,6 +1283,31 @@ public class DBLoader
         gauss = gauss + AVE_ITEMS_IN_STOCK_PER_WAREHOUSE;
 
         return (int)Math.round(gauss);
+    }
+
+    /**
+    * Generates a unique UUID for the customer.
+    * @param warehouse int containing the warehouse_id
+    * @param station int containing the station_id
+    * @param customer int containing the customer_id
+    * @return String containing the UUID
+    */
+    private String getCustomerKey(int warehouse, int station, int customer)
+    {
+        return warehouse + "-" + station + "-" + customer;
+    }
+
+    /**
+    * Generates a unique UUID for the order.
+    * @param warehouse int containing the warehouse_id
+    * @param station int containing the station_id
+    * @param customer int containing the customer_id
+    * @param order int containing the order_id
+    * @return String containing the UUID
+    */
+    private String getOrderKey(int warehouse, int station, int customer, int order)
+    {
+        return warehouse + "-" + station + "-" + customer + "-" + order;
     }
 
 }
