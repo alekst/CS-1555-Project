@@ -905,7 +905,7 @@ public class DBLoader
 	
 	public void getDeliveryTransaction(int warehouse_id) 
 	{
-		java.sql.Date sqlDate = new java.sql.Date(getTodaysDate().getTime());
+		
 		try {
 				String theDeliveredString = "select * from Orders where completed =? and warehouse_id = ?";
 				PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
@@ -919,6 +919,7 @@ public class DBLoader
 					 int station = resultSet.getInt(3);
 					 int warehouse = resultSet.getInt(4);
 					 setCompleted(order, customer, station, warehouse);
+					 addDeliveryDate(order,customer,station,warehouse);
 					 //incrementBalance(warehouse, customer, station, )
 					 //set all delivereds to zero by taking customer_id and station_id			
 			 	 }
@@ -940,6 +941,29 @@ public class DBLoader
 		**/
 			
 		
+	}
+	
+	public void addDeliveryDate(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		Date date = getTodaysDate();
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		String dateString = df.format(date);
+		try
+		{
+			String addDeliveryDateString = "update LineItems set delivery_date = ? where order_id=? and customer_id=? and station_id=? and warehouse_id=?";
+			PreparedStatement addDeliveryDate = con.prepareStatement(addDeliveryDateString);
+			addDeliveryDate(1, dateString);
+			addDeliveryDate(2, order_id);
+			addDeliveryDate(3, customer_id);
+			addDeliveryDate(4, station_id);
+			addDeliveryDate(5, warehouse_id);
+			addDeliveryDate.executeUpdate();
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error adding the delivery date");
+			System.exit(1);
+		}
 	}
 	
 	public void setCompleted(int order_id, int customer_id, int station_id, int warehouse_id)
