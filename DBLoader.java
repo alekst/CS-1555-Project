@@ -944,10 +944,10 @@ public class DBLoader
 					 ResultSet rs = getCharge(order, customer, station, warehouse);
 					 while (rs.next())
 					 {
-						 BigDecimal cost = rs.getBigDecimal(8); //getting the cost per item
-						 int quantity = rs.getInt(7); // getting the quantity
+						 BigDecimal cost = rs.getBigDecimal(8); //getting the amount
+						 //int quantity = rs.getInt(7); // getting the quantity
 						 BigDecimal tax = getTax(station); //getting the tax
-						 BigDecimal total = calculateCost(quantity, cost, tax);
+						 BigDecimal total = calculateCost(cost, tax);
 						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
 					 }
 					 rs.close();
@@ -963,10 +963,10 @@ public class DBLoader
 		
 	}
 	
-	public BigDecimal calculateCost(int quantity, BigDecimal itemPrice, BigDecimal tax)
+	public BigDecimal calculateCost(BigDecimal amount, BigDecimal tax)
 	{
-		BigDecimal itemCost = itemPrice.multiply(new BigDecimal(quantity));
-		BigDecimal totalCost = itemCost.multip≈≈≈ly(tax);
+		BigDecimal taxAmount = amount.multiply(tax);
+		BigDecimal totalCost = amount.add(taxAmount);
 		
 		return totalCost;
 	}
@@ -1000,7 +1000,7 @@ public class DBLoader
 	{ // I get the error getting charge when run this. 
 		try 
 		{
-			String getChargeString = "select * from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse = ?";
+			String getChargeString = "select * from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
 			PreparedStatement getCharge = con.prepareStatement(getChargeString);
 			getCharge.setInt(1, order_id);
 			getCharge.setInt(2, customer_id);
@@ -1010,7 +1010,7 @@ public class DBLoader
 		}
 		catch(SQLException e)
 		{
-			System.out.println("Error getting charge");
+			System.out.println("Error getting charge " + e.toString());
 			System.exit(1);
 		}
 		return rs;
@@ -1021,16 +1021,19 @@ public class DBLoader
 		BigDecimal rate = new BigDecimal(0);
 		try
 		{
-			String getTaxString = "select distinct tax_rate from Stations where station_id = ?";
+			String getTaxString = "select * from Stations where station_id = ?";
 			PreparedStatement getTax = con.prepareStatement(getTaxString);
 			getTax.setInt(1, station_id);
 			resultSet = getTax.executeQuery();
-			rate = resultSet.getBigDecimal(1);
+			while (resultSet.next())
+			{
+				rate = resultSet.getBigDecimal(8);
+			}
 			System.out.println("The rate is " + rate);
 		}
 		catch(SQLException e)
 		{
-			System.out.println("Error getting the tax rate");
+			System.out.println("Error getting the tax rate " +  e.toString());
 			System.exit(1);
 		}
 		return rate;
