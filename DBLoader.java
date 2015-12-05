@@ -593,7 +593,8 @@ public class DBLoader
                             insertOrders.setInt(3, currStationID);
                             insertOrders.setInt(4, currWarehouseID);
                             insertOrders.setString(5, theDate);
-                            insertOrders.setInt(6, Math.round(rand.nextFloat()));
+                            //insertOrders.setInt(6, Math.round(rand.nextFloat()));
+							insertOrders.setInt(6, 1);
                             insertOrders.setInt(7, lineCount);
                             insertOrders.addBatch();
 
@@ -732,7 +733,6 @@ public class DBLoader
 		Date date = getTodaysDate();
 		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 		String dateString = df.format(date);
-		System.out.println("date is " + dateString);
         String addOrderString = "insert into Orders (order_id, customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
         + "values (?, ?, ?, ?, ?, ?, ?)";
         String addLineItemString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
@@ -886,7 +886,7 @@ public class DBLoader
 	{
 		try 
 		{
-			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes
+			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes	
 			// get the most recent order here
 			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and customer_id = ? and station_id = ?";
 			PreparedStatement getOrderStatus = con.prepareStatement(getOrderStatusString);
