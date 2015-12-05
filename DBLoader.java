@@ -918,29 +918,37 @@ public class DBLoader
 					 int customer = resultSet.getInt(2);
 					 int station = resultSet.getInt(3);
 					 int warehouse = resultSet.getInt(4);
-					 setCompleted(order, customer, station, warehouse);
-					 addDeliveryDate(order,customer,station,warehouse);
-					 //incrementBalance(warehouse, customer, station, )
-					 //set all delivereds to zero by taking customer_id and station_id			
+					 setCompleted(order, customer, station, warehouse); //set completed to 1
+					 addDeliveryDate(order,customer,station,warehouse); //add the delivery date
+					 updateDeliveries(warehouse, customer, station);//update the delivery count
+					 ResultSet rs = getCharge(order, customer, station, warehouse);
+					 while (rs.next())
+					 {
+						 BigDecimal cost = rs.getBigDecimal(1); //getting the cost per item
+						 int quantity = rs.getInt(2); // getting the quantity
+						 BigDecimal tax = getTax(station); //getting the tax
+						 BigDecimal total = calculateCost(quantity, cost, tax);
+						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
+					 }
+					 rs.close();
 			 	 }
+				 resultSet.close();
 			 }
 			 catch(SQLException e)
 			 {
 				 System.out.println("Error running the delivery transaction");
 				 System.exit(1);
 			 }
-		
-		/**
-		* 1. Find all tuples in the warehouse where delivered was 0;  
-		* 2. flip the completed flag;
-			a. Add the delivery_date to LineItems 
-		* 2. get the unique customer (customer_id and station_id combo)
-		* 3. adjust the balance in the unique customer (incrementBalance)
-		* 4. increment total_deliveries (updateDeliveries)
-		*  
-		**/
 			
 		
+	}
+	
+	public BigDecimal calculateCost(int quantity, BigDecimal itemPrice, BigDecimal tax)
+	{
+		BigDecimal itemCost = itemPrice.multiply(new BigDecimal(quantity));
+		BigDecimal totalCost = itemCost.multiply(tax);
+		
+		return totalCost;
 	}
 	
 	public void addDeliveryDate(int order_id, int customer_id, int station_id, int warehouse_id)
@@ -950,20 +958,61 @@ public class DBLoader
 		String dateString = df.format(date);
 		try
 		{
-			String addDeliveryDateString = "update LineItems set delivery_date = ? where order_id=? and customer_id=? and station_id=? and warehouse_id=?";
-			PreparedStatement addDeliveryDate = con.prepareStatement(addDeliveryDateString);
-			addDeliveryDate(1, dateString);
-			addDeliveryDate(2, order_id);
-			addDeliveryDate(3, customer_id);
-			addDeliveryDate(4, station_id);
-			addDeliveryDate(5, warehouse_id);
-			addDeliveryDate.executeUpdate();
+			String addDeliveryString = "update LineItems set delivery_date = ? where order_id=? and customer_id=? and station_id=? and warehouse_id=?";
+			PreparedStatement addDelivery = con.prepareStatement(addDeliveryString);
+			addDelivery.setString(1, dateString);
+			addDelivery.setInt(2, order_id);
+			addDelivery.setInt(3, customer_id);
+			addDelivery.setInt(4, station_id);
+			addDelivery.setInt(5, warehouse_id);
+			addDelivery.executeUpdate();
+			
 		}
 		catch(SQLException e)
 		{
 			System.out.println("Error adding the delivery date");
 			System.exit(1);
 		}
+	}
+
+	
+	public ResultSet getCharge(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		try 
+		{
+			String getChargeString = "select amount, quantity from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse = ?";
+			PreparedStatement getCharge = con.prepareStatement(getChargeString);
+			getCharge.setInt(1, order_id);
+			getCharge.setInt(2, customer_id);
+			getCharge.setInt(3, station_id);
+			getCharge.setInt(4, warehouse_id);
+			return getCharge.executeQuery();
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error getting charge");
+			return null;
+		}
+	}
+	
+	public BigDecimal getTax(int station_id)
+	{
+		BigDecimal rate = new BigDecimal(0);
+		try
+		{
+			String getTaxString = "select distinct tax_rate from Stations where station_id = ?";
+			PreparedStatement getTax = con.prepareStatement(getTaxString);
+			getTax.setInt(1, station_id);
+			resultSet = getTax.executeQuery();
+			rate = resultSet.getBigDecimal(1);
+			System.out.println("The rate is " + rate);
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error getting the tax rate");
+			System.exit(1);
+		}
+		return rate;
 	}
 	
 	public void setCompleted(int order_id, int customer_id, int station_id, int warehouse_id)
@@ -998,11 +1047,12 @@ public class DBLoader
 	{
 		
 		try {
-			String incrementBalanceString = "update Customers set balance = balance + ? where customer_id = ? and station_id = ?";
+			String incrementBalanceString = "update Customers set balance = balance + ? where warehouse_id = ? and customer_id = ? and station_id = ?";
 			PreparedStatement incrementBalance = con.prepareStatement(incrementBalanceString);
 			incrementBalance.setBigDecimal(1, charge);
-			incrementBalance.setInt(2, customer_id);
-			incrementBalance.setInt(3, station_id);
+			incrementBalance.setInt(2, warehouse_id);
+			incrementBalance.setInt(3, customer_id);
+			incrementBalance.setInt(4, station_id);
 			incrementBalance.executeUpdate();
 		} 
 		catch (SQLException e)
