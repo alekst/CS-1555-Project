@@ -966,7 +966,7 @@ public class DBLoader
 	public BigDecimal calculateCost(int quantity, BigDecimal itemPrice, BigDecimal tax)
 	{
 		BigDecimal itemCost = itemPrice.multiply(new BigDecimal(quantity));
-		BigDecimal totalCost = itemCost.multiply(tax);
+		BigDecimal totalCost = itemCost.multip≈≈≈ly(tax);
 		
 		return totalCost;
 	}
