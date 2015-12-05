@@ -219,13 +219,20 @@ public class DBLoader
             }
             else if (answer.toUpperCase().equals("S"))
             {
-				System.out.print("Enter the warehouse ID: ");
-				int warehouse = Integer.parseInt(scan.nextLine());
-				System.out.print("Enter the customer ID: ");
-				int customer = Integer.parseInt(scan.nextLine());
-				System.out.print("Enter the station ID: ");
-				int station = Integer.parseInt(scan.nextLine());
-				getOrderStatus(warehouse, station, customer);
+				try
+				{
+					System.out.print("Enter the warehouse ID: ");
+					int warehouse = Integer.parseInt(scan.nextLine());
+					System.out.print("Enter the customer ID: ");
+					int customer = Integer.parseInt(scan.nextLine());
+					System.out.print("Enter the station ID: ");
+					int station = Integer.parseInt(scan.nextLine());
+					getOrderStatus(warehouse, station, customer);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Error parsing input " + e.toString());
+				}
             }
             else if (answer.toUpperCase().equals("D"))
             {
@@ -907,20 +914,70 @@ public class DBLoader
 		try 
 		{
 			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes	
-			// get the most recent order here
-			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and customer_id = ? and station_id = ?";
-			PreparedStatement getOrderStatus = con.prepareStatement(getOrderStatusString);
-			getOrderStatus.setInt(1, warehouse_id);
-			getOrderStatus.setInt(2, station_id);
-			getOrderStatus.setInt(3, customer_id);
-			getOrderStatus.execute();
+			resultSet = getMostRecentOrders(warehouse_id, station_id, customer_id);
+			while (resultSet.next())
+			{
+				int order_id = resultSet.getInt(1);
+				System.out.println("getting the order details for the order number " + order_id);
+				getOrderDetails(order_id, customer_id, station_id, warehouse_id);
+			}
+			resultSet.close();
 		}
 		catch (SQLException e)
 		{
-			System.out.println("Error getting the order status");
+			System.out.println("Error getting the order status " + e.toString());
 			System.exit(1);
 		}
 		
+	}
+	
+	public void getOrderDetails(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		
+		try 
+		{
+			String getOrderDetailsString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and station_id = ? and customer_id = ? and order_id = ?";
+			PreparedStatement getOrderDetails = con.prepareStatement(getOrderDetailsString);
+			getOrderDetails.setInt(1, warehouse_id);
+			getOrderDetails.setInt(2, station_id);
+			getOrderDetails.setInt(3, customer_id);
+			getOrderDetails.setInt(4, order_id);
+			resultSet = getOrderDetails.executeQuery();
+			while (resultSet.next())
+			{
+				System.out.println("Item number (ID): " + resultSet.getInt(1));
+				System.out.println("Quantity:\t" + resultSet.getInt(2));
+				System.out.println("Amount Due:\t" + resultSet.getBigDecimal(3));
+				System.out.println("Delivery Date: " + resultSet.getString(4));
+			}
+			resultSet.close();
+		} 
+		catch (SQLException e)
+		{
+			System.out.println("Error getting order details " + e.toString());
+		}
+
+	}
+	
+	public ResultSet getMostRecentOrders(int warehouse_id, int station_id, int customer_id)
+	{
+		System.out.println("Getting the most recent order... ");
+		
+		try
+		{
+			String getMostRecentOrdersString = "select * from Orders where order_date in (select max(order_date) from Orders where warehouse_id = ? and customer_id=? and station_id=?)";
+			PreparedStatement getMostRecentOrders = con.prepareStatement(getMostRecentOrdersString);
+			getMostRecentOrders.setInt(1, warehouse_id);
+			getMostRecentOrders.setInt(3, station_id);
+			getMostRecentOrders.setInt(2, customer_id);
+			resultSet = getMostRecentOrders.executeQuery();
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error getting the most recent order " + e.toString());
+			System.exit(1);
+		}
+		return resultSet;
 	}
 	
 	public void getDeliveryTransaction(int warehouse_id) 
