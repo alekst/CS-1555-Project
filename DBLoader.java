@@ -907,13 +907,19 @@ public class DBLoader
 	{
 		java.sql.Date sqlDate = new java.sql.Date(getTodaysDate().getTime());
 		try {
-				String theDeliveredString = "select customer_id, station_id from Orders where completed =? and warehouse_id = ?";
+				String theDeliveredString = "select * from Orders where completed =? and warehouse_id = ?";
 				PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
 				theDelivered.setInt(1, 0);
 				theDelivered.setInt(2, warehouse_id);
 				resultSet = theDelivered.executeQuery();
 				while (resultSet.next())
 				 {
+					 int order = resultSet.getInt(1);
+					 int customer = resultSet.getInt(2);
+					 int station = resultSet.getInt(3);
+					 int warehouse = resultSet.getInt(4);
+					 setCompleted(order, customer, station, warehouse);
+					 //incrementBalance(warehouse, customer, station, )
 					 //set all delivereds to zero by taking customer_id and station_id			
 			 	 }
 			 }
@@ -936,6 +942,25 @@ public class DBLoader
 		
 	}
 	
+	public void setCompleted(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		try 
+		{	
+			String setCompletedString = "update Orders set completed=1 where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
+			PreparedStatement setCompleted = con.prepareStatement(setCompletedString);
+			setCompleted.setInt(1, order_id);
+			setCompleted.setInt(2, customer_id);
+			setCompleted.setInt(3, station_id);
+			setCompleted.setInt(4, warehouse_id);
+			setCompleted.executeUpdate();
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error setting complete to 1");
+			System.exit(1);
+		}
+	}
+	
 	public Date getTodaysDate()
 	{
 		Date date = Calendar.getInstance().getTime();
@@ -944,14 +969,6 @@ public class DBLoader
 // 		System.out.println("sqldate is " + sqlDate);
 		return date;
 	}
-	//
-	// public void flipDelivered(int warehouse_id, int customer_id, int station_id)
-	// {
-	// 	try
-	// 	{
-	// 		String // sql command to set the delivered to 0
-	// 	}
-	// }
 	
 	public void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge)
 	{
