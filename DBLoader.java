@@ -918,7 +918,8 @@ public class DBLoader
 			while (resultSet.next())
 			{
 				int order_id = resultSet.getInt(1);
-				System.out.println("getting the order details for the order number " + order_id);
+				//System.out.println("order id is " + order_id);
+				//System.out.println("getting the order details for the order number " + order_id + " customer id " + customer_id + " station_id " + station_id + " warehouse_id " + warehouse_id);
 				getOrderDetails(order_id, customer_id, station_id, warehouse_id);
 			}
 			resultSet.close();
@@ -936,6 +937,7 @@ public class DBLoader
 		
 		try 
 		{
+			System.out.println("checking on the order details for the order number " + order_id);
 			String getOrderDetailsString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and station_id = ? and customer_id = ? and order_id = ?";
 			PreparedStatement getOrderDetails = con.prepareStatement(getOrderDetailsString);
 			getOrderDetails.setInt(1, warehouse_id);
@@ -943,12 +945,14 @@ public class DBLoader
 			getOrderDetails.setInt(3, customer_id);
 			getOrderDetails.setInt(4, order_id);
 			resultSet = getOrderDetails.executeQuery();
+			System.out.println("Item number \t Quantity \t Amount Due \t Delivery Date\t");
+			System.out.prointln("---------- \t --------- \t -----------\t -------------\t");
 			while (resultSet.next())
 			{
-				System.out.println("Item number (ID): " + resultSet.getInt(1));
-				System.out.println("Quantity:\t" + resultSet.getInt(2));
-				System.out.println("Amount Due:\t" + resultSet.getBigDecimal(3));
-				System.out.println("Delivery Date: " + resultSet.getString(4));
+				System.out.print("" + resultSet.getInt(1));
+				System.out.print("\t\t\t" + resultSet.getInt(2));
+				System.out.print("\t\t" + resultSet.getBigDecimal(3));
+				System.out.println("\t\t" + resultSet.getString(4));
 			}
 			resultSet.close();
 		} 
@@ -965,12 +969,22 @@ public class DBLoader
 		
 		try
 		{
-			String getMostRecentOrdersString = "select * from Orders where order_date in (select max(order_date) from Orders where warehouse_id = ? and customer_id=? and station_id=?)";
+			String getMostRecentOrdersString = "select * from Orders where order_date in (select max(order_date) from Orders where warehouse_id = ? and station_id=? and customer_id= ? ) and warehouse_id = ? and station_id = ? and customer_id = ? ";
 			PreparedStatement getMostRecentOrders = con.prepareStatement(getMostRecentOrdersString);
 			getMostRecentOrders.setInt(1, warehouse_id);
-			getMostRecentOrders.setInt(3, station_id);
-			getMostRecentOrders.setInt(2, customer_id);
+			getMostRecentOrders.setInt(2, station_id);
+			getMostRecentOrders.setInt(3, customer_id);
+			getMostRecentOrders.setInt(4, warehouse_id);
+			getMostRecentOrders.setInt(5, station_id);
+			getMostRecentOrders.setInt(6, customer_id);
+			
 			resultSet = getMostRecentOrders.executeQuery();
+			//for debugging purposes
+			// while(resultSet.next())
+// 			{
+// 				System.out.println("order id is " + resultSet.getInt(1));
+// 				System.out.println("order_date is " + resultSet.getString(5));
+// 			}
 		}
 		catch (SQLException e)
 		{
