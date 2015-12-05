@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.Locale;
 
 public class DBLoader
 {
@@ -52,6 +53,9 @@ public class DBLoader
     private HashMap<String, Integer> currOrderID, currLineID;
     private String[] last20Orders;
     private int last20Index = 0;
+	
+	Locale currentLocale = Locale.getDefault();
+	NumberFormat cf = NumberFormat.getCurrencyInstance(currentLocale); //currency formatter
 
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
@@ -924,6 +928,7 @@ public class DBLoader
 			}
 			resultSet.close();
 		}
+		
 		catch (SQLException e)
 		{
 			System.out.println("Error getting the order status " + e.toString());
@@ -934,31 +939,43 @@ public class DBLoader
 	
 	public void getOrderDetails(int order_id, int customer_id, int station_id, int warehouse_id)
 	{
-		
+		System.out.println("checking on the order details for the order number " + order_id);
+		String getOrderDetailsString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and station_id = ? and customer_id = ? and order_id = ?";
 		try 
 		{
-			System.out.println("checking on the order details for the order number " + order_id);
-			String getOrderDetailsString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and station_id = ? and customer_id = ? and order_id = ?";
-			PreparedStatement getOrderDetails = con.prepareStatement(getOrderDetailsString);
-			getOrderDetails.setInt(1, warehouse_id);
-			getOrderDetails.setInt(2, station_id);
-			getOrderDetails.setInt(3, customer_id);
-			getOrderDetails.setInt(4, order_id);
-			resultSet = getOrderDetails.executeQuery();
+			preparedStatement = con.prepareStatement(getOrderDetailsString);
+			preparedStatement.setInt(1, warehouse_id);
+			preparedStatement.setInt(2, station_id);
+			preparedStatement.setInt(3, customer_id);
+			preparedStatement.setInt(4, order_id);
+			resultSet = preparedStatement.executeQuery();
 			System.out.println("Item number \t Quantity \t Amount Due \t Delivery Date\t");
-			System.out.prointln("---------- \t --------- \t -----------\t -------------\t");
+			System.out.println("---------- \t --------- \t -----------\t -------------\t");
 			while (resultSet.next())
 			{
 				System.out.print("" + resultSet.getInt(1));
 				System.out.print("\t\t\t" + resultSet.getInt(2));
-				System.out.print("\t\t" + resultSet.getBigDecimal(3));
+				System.out.print("\t\t" + cf.format(resultSet.getBigDecimal(3)));
 				System.out.println("\t\t" + resultSet.getString(4));
 			}
-			resultSet.close();
-		} 
+			resultSet.close(); 
+		}
+		
 		catch (SQLException e)
 		{
 			System.out.println("Error getting order details " + e.toString());
+		}
+		finally 
+		{
+			try { 
+				if (preparedStatement != null)
+					preparedStatement.close();
+			}
+			catch (SQLException e) 
+			{
+				System.out.println("Cannot close statement. " + e.toString());
+			}
+				
 		}
 
 	}
