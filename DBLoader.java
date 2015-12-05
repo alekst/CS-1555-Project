@@ -40,7 +40,7 @@ public class DBLoader
     private Scanner scan;
     private final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private final String NUMBERS = "0123456789";
-    private final String[] TAXES = {"0.01", "0.02", "0.03", "0.04", "0.05", "0.06", "0.07", "0.08", "0.09", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15"};
+    private final float TAXES = {0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15};
     private final String[] STREET_SUFFIXES = {"St.", "Ave.", "Rd.", "Way"};
     private final int MAX_ADDRESS = 2000;
     private final int NAME_MIN = 4;
@@ -292,7 +292,6 @@ public class DBLoader
 
         return connection;
     }
-
 
 
     public void initDatabase()
@@ -561,6 +560,8 @@ public class DBLoader
                 for (currStationID = 1; currStationID <= STATIONS_PER_WAREHOUSE; currStationID++)
                 {
                     stationTotal = 0;
+                    String 
+                    float taxRate = getRandomTax(rand);
 
                     // generate the customers
                     for (currCustomerID = 1; currCustomerID <= CUSTOMERS_PER_STATION; currCustomerID++)
@@ -584,7 +585,7 @@ public class DBLoader
                             {
                                 int itemID = rand.nextInt(ITEMS) + 1;
                                 int itemCount = rand.nextInt(10) + 1;
-                                float lineTotal = itemCost.get(itemID).floatValue() * itemCount;
+                                float lineTotal = (itemCost.get(itemID).floatValue() * itemCount) * taxRate;
                                 customerTotal += lineTotal;
 
                                 // update the hashmaps to reflect the sold and order numbers
@@ -650,7 +651,7 @@ public class DBLoader
                     insertStations.setString(5, getName(rand));
                     insertStations.setString(6, getState(rand));
                     insertStations.setString(7, getZip(rand));
-                    insertStations.setString(8, getTax(rand));
+                    insertStations.setString(8, twoDecimals(taxRate));
                     insertStations.setString(9, twoDecimals(stationTotal));
                     insertStations.addBatch();
                     warehouseTotal += stationTotal;
@@ -663,7 +664,7 @@ public class DBLoader
                 insertWarehouses.setString(4, getName(rand));
                 insertWarehouses.setString(5, getState(rand));
                 insertWarehouses.setString(6, getZip(rand));
-                insertWarehouses.setString(7, getTax(rand));
+                insertWarehouses.setString(7, twoDecimals(getRandomTax(rand)));
                 insertWarehouses.setString(8, twoDecimals(warehouseTotal));
                 insertWarehouses.addBatch();
 
@@ -1362,12 +1363,9 @@ public class DBLoader
     * @param rand Random number generator object
     * @return String containing the tax rate
     */
-    private String getTax(Random rand)
+    private float getRandomTax(Random rand)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append(TAXES[rand.nextInt(TAXES.length)]);
-
-        return sb.substring(0, 4);
+        return TAXES[rand.nextInt(TAXES.length)]);
     }
 
     /**
@@ -1557,6 +1555,13 @@ public class DBLoader
         return (int)Math.round(gauss);
     }
 
+    /**
+    * Enqueues the passed order in the recent order queue
+    * @param warehouse int containing the warehouse_id
+    * @param station int containing the station_id
+    * @param customer int containing the customer_id
+    * @param order int containing the order_id
+    */
     private void enqueueOrder(int warehouse, int station, int customer, int order)
     {
         last20Orders[last20Index] = getOrderKey(warehouse, station, customer, order);
