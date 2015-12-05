@@ -27,13 +27,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.Locale;
 
 public class DBLoader
 {
 	private Statement statement;
 	private PreparedStatement preparedStatement;
 	private Connection con;
-	private ResultSet resultSet;
+	private ResultSet resultSet, rs;
     private String server;
 	private String username;
 	private String password;
@@ -52,6 +53,9 @@ public class DBLoader
     private HashMap<String, Integer> currOrderID, currLineID;
     private String[] last20Orders;
     private int last20Index = 0;
+	
+	Locale currentLocale = Locale.getDefault();
+	NumberFormat cf = NumberFormat.getCurrencyInstance(currentLocale); //currency formatter
 
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
@@ -219,17 +223,26 @@ public class DBLoader
             }
             else if (answer.toUpperCase().equals("S"))
             {
-				System.out.print("Enter the warehouse ID: ");
-				int warehouse = Integer.parseInt(scan.nextLine());
-				System.out.print("Enter the customer ID: ");
-				int customer = Integer.parseInt(scan.nextLine());
-				System.out.print("Enter the station ID: ");
-				int station = Integer.parseInt(scan.nextLine());
-				getOrderStatus(warehouse, station, customer);
+				try
+				{
+					System.out.print("Enter the warehouse ID: ");
+					int warehouse = Integer.parseInt(scan.nextLine());
+					System.out.print("Enter the customer ID: ");
+					int customer = Integer.parseInt(scan.nextLine());
+					System.out.print("Enter the station ID: ");
+					int station = Integer.parseInt(scan.nextLine());
+					getOrderStatus(warehouse, station, customer);
+				}
+				catch (NumberFormatException e)
+				{
+					System.out.println("Error parsing input " + e.toString());
+				}
             }
             else if (answer.toUpperCase().equals("D"))
             {
-
+				System.out.print("Enter the warehouse ID: ");
+				int warehouse = Integer.parseInt(scan.nextLine());
+				getDeliveryTransaction(warehouse); 
             }
             else if (answer.toUpperCase().equals("L"))
             {
@@ -906,20 +919,97 @@ public class DBLoader
 		try 
 		{
 			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes	
-			// get the most recent order here
-			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and customer_id = ? and station_id = ?";
-			PreparedStatement getOrderStatus = con.prepareStatement(getOrderStatusString);
-			getOrderStatus.setInt(1, warehouse_id);
-			getOrderStatus.setInt(2, station_id);
-			getOrderStatus.setInt(3, customer_id);
-			getOrderStatus.execute();
+			resultSet = getMostRecentOrders(warehouse_id, station_id, customer_id);
+			while (resultSet.next())
+			{
+				int order_id = resultSet.getInt(1);
+				//System.out.println("order id is " + order_id);
+				//System.out.println("getting the order details for the order number " + order_id + " customer id " + customer_id + " station_id " + station_id + " warehouse_id " + warehouse_id);
+				getOrderDetails(order_id, customer_id, station_id, warehouse_id);
+			}
+			resultSet.close();
 		}
+		
 		catch (SQLException e)
 		{
-			System.out.println("Error getting the order status");
+			System.out.println("Error getting the order status " + e.toString());
 			System.exit(1);
 		}
 		
+	}
+	
+	public void getOrderDetails(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		System.out.println("checking on the order details for the order number " + order_id);
+		String getOrderDetailsString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and station_id = ? and customer_id = ? and order_id = ?";
+		try 
+		{
+			preparedStatement = con.prepareStatement(getOrderDetailsString);
+			preparedStatement.setInt(1, warehouse_id);
+			preparedStatement.setInt(2, station_id);
+			preparedStatement.setInt(3, customer_id);
+			preparedStatement.setInt(4, order_id);
+			resultSet = preparedStatement.executeQuery();
+			System.out.println("Item number \t Quantity \t Amount Due \t Delivery Date\t");
+			System.out.println("---------- \t --------- \t -----------\t -------------\t");
+			while (resultSet.next())
+			{
+				System.out.print("" + resultSet.getInt(1));
+				System.out.print("\t\t\t" + resultSet.getInt(2));
+				System.out.print("\t\t" + cf.format(resultSet.getBigDecimal(3)));
+				System.out.println("\t\t" + resultSet.getString(4));
+			}
+			resultSet.close(); 
+		}
+		
+		catch (SQLException e)
+		{
+			System.out.println("Error getting order details " + e.toString());
+		}
+		finally 
+		{
+			try { 
+				if (preparedStatement != null)
+					preparedStatement.close();
+			}
+			catch (SQLException e) 
+			{
+				System.out.println("Cannot close statement. " + e.toString());
+			}
+				
+		}
+
+	}
+	
+	public ResultSet getMostRecentOrders(int warehouse_id, int station_id, int customer_id)
+	{
+		System.out.println("Getting the most recent order... ");
+		
+		try
+		{
+			String getMostRecentOrdersString = "select * from Orders where order_date in (select max(order_date) from Orders where warehouse_id = ? and station_id=? and customer_id= ? ) and warehouse_id = ? and station_id = ? and customer_id = ? ";
+			PreparedStatement getMostRecentOrders = con.prepareStatement(getMostRecentOrdersString);
+			getMostRecentOrders.setInt(1, warehouse_id);
+			getMostRecentOrders.setInt(2, station_id);
+			getMostRecentOrders.setInt(3, customer_id);
+			getMostRecentOrders.setInt(4, warehouse_id);
+			getMostRecentOrders.setInt(5, station_id);
+			getMostRecentOrders.setInt(6, customer_id);
+			
+			resultSet = getMostRecentOrders.executeQuery();
+			//for debugging purposes
+			// while(resultSet.next())
+// 			{
+// 				System.out.println("order id is " + resultSet.getInt(1));
+// 				System.out.println("order_date is " + resultSet.getString(5));
+// 			}
+		}
+		catch (SQLException e)
+		{
+			System.out.println("Error getting the most recent order " + e.toString());
+			System.exit(1);
+		}
+		return resultSet;
 	}
 	
 	public void getDeliveryTransaction(int warehouse_id) 
@@ -943,10 +1033,10 @@ public class DBLoader
 					 ResultSet rs = getCharge(order, customer, station, warehouse);
 					 while (rs.next())
 					 {
-						 BigDecimal cost = rs.getBigDecimal(1); //getting the cost per item
-						 int quantity = rs.getInt(2); // getting the quantity
+						 BigDecimal cost = rs.getBigDecimal(8); //getting the amount
+						 //int quantity = rs.getInt(7); // getting the quantity
 						 BigDecimal tax = getTax(station); //getting the tax
-						 BigDecimal total = calculateCost(quantity, cost, tax);
+						 BigDecimal total = calculateCost(cost, tax);
 						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
 					 }
 					 rs.close();
@@ -962,10 +1052,10 @@ public class DBLoader
 		
 	}
 	
-	public BigDecimal calculateCost(int quantity, BigDecimal itemPrice, BigDecimal tax)
+	public BigDecimal calculateCost(BigDecimal amount, BigDecimal tax)
 	{
-		BigDecimal itemCost = itemPrice.multiply(new BigDecimal(quantity));
-		BigDecimal totalCost = itemCost.multiply(tax);
+		BigDecimal taxAmount = amount.multiply(tax);
+		BigDecimal totalCost = amount.add(taxAmount);
 		
 		return totalCost;
 	}
@@ -996,22 +1086,23 @@ public class DBLoader
 
 	
 	public ResultSet getCharge(int order_id, int customer_id, int station_id, int warehouse_id)
-	{
+	{ // I get the error getting charge when run this. 
 		try 
 		{
-			String getChargeString = "select amount, quantity from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse = ?";
+			String getChargeString = "select * from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
 			PreparedStatement getCharge = con.prepareStatement(getChargeString);
 			getCharge.setInt(1, order_id);
 			getCharge.setInt(2, customer_id);
 			getCharge.setInt(3, station_id);
 			getCharge.setInt(4, warehouse_id);
-			return getCharge.executeQuery();
+			rs = getCharge.executeQuery();
 		}
 		catch(SQLException e)
 		{
-			System.out.println("Error getting charge");
-			return null;
+			System.out.println("Error getting charge " + e.toString());
+			System.exit(1);
 		}
+		return rs;
 	}
 	
 	public BigDecimal getTax(int station_id)
@@ -1019,16 +1110,19 @@ public class DBLoader
 		BigDecimal rate = new BigDecimal(0);
 		try
 		{
-			String getTaxString = "select distinct tax_rate from Stations where station_id = ?";
+			String getTaxString = "select * from Stations where station_id = ?";
 			PreparedStatement getTax = con.prepareStatement(getTaxString);
 			getTax.setInt(1, station_id);
 			resultSet = getTax.executeQuery();
-			rate = resultSet.getBigDecimal(1);
+			while (resultSet.next())
+			{
+				rate = resultSet.getBigDecimal(8);
+			}
 			System.out.println("The rate is " + rate);
 		}
 		catch(SQLException e)
 		{
-			System.out.println("Error getting the tax rate");
+			System.out.println("Error getting the tax rate " +  e.toString());
 			System.exit(1);
 		}
 		return rate;
