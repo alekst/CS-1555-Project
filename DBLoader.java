@@ -15,7 +15,7 @@
 
 import java.sql.*;
 import java.math.*;
-import java.text.DecimalFormat;
+import java.text.*;
 import java.io.FileInputStream;
 import java.util.Scanner;
 import java.io.IOException;
@@ -54,8 +54,8 @@ public class DBLoader
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
     private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 30;
-    private int ITEMS = 10000;
+    private int CUSTOMERS_PER_STATION = 10;
+    private int ITEMS = 100;
     private final int MAX_ORDERS_PER_CUSTOMER = 100;
     private final int MIN_LINE_ITEMS_PER_ORDER = 5;
     private final int MAX_LINE_ITEMS_PER_ORDER = 15;
@@ -93,7 +93,7 @@ public class DBLoader
 
         // ask the user if they want to switch databases
         System.out.println("\nWelcome to the database loader!");
-		System.out.println("Today is " + addTodaysDate());
+		System.out.println("Today is " + getTodaysDate());
         System.out.println("\nThe default database is : " + SERVER_ADDR);
         System.out.print("Do you want to switch to a different database? (y/n): ");
         String answer = scan.nextLine();
@@ -728,7 +728,11 @@ public class DBLoader
     */
     public void newOrder(int warehouse, int station, int customer, int[] items, int[] counts, int totalItems)
     {
-        Random rand = new Random(System.nanoTime());
+        //Random rand = new Random(System.nanoTime());
+		Date date = getTodaysDate();
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		String dateString = df.format(date);
+		System.out.println("date is " + dateString);
         String addOrderString = "insert into Orders (order_id, customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
         + "values (?, ?, ?, ?, ?, ?, ?)";
         String addLineItemString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
@@ -746,7 +750,7 @@ public class DBLoader
             addOrder.setInt(2, customer);
             addOrder.setInt(3, station);
             addOrder.setInt(4, warehouse);
-            addOrder.setString(5, getDate(rand));
+            addOrder.setString(5, dateString);
             addOrder.setInt(6, 0);
             addOrder.setInt(7, totalItems);
 
@@ -901,13 +905,13 @@ public class DBLoader
 	
 	public void getDeliveryTransaction(int warehouse_id) 
 	{
-		java.sql.Date sqlDate = new java.sql.Date(addTodaysDate().getTime());
+		java.sql.Date sqlDate = new java.sql.Date(getTodaysDate().getTime());
 		try {
 				String theDeliveredString = "select customer_id, station_id from Orders where completed =? and warehouse_id = ?";
 				PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
 				theDelivered.setInt(1, 0);
 				theDelivered.setInt(2, warehouse_id);
-				resultSet = theDelivered.execute();
+				resultSet = theDelivered.executeQuery();
 				while (resultSet.next())
 				 {
 					 //set all delivereds to zero by taking customer_id and station_id			
@@ -932,7 +936,7 @@ public class DBLoader
 		
 	}
 	
-	public Date addTodaysDate()
+	public Date getTodaysDate()
 	{
 		Date date = Calendar.getInstance().getTime();
 		// java.sql.Date sqlDate = new java.sql.Date(date.getTime());
@@ -940,14 +944,14 @@ public class DBLoader
 // 		System.out.println("sqldate is " + sqlDate);
 		return date;
 	}
-	
-	public void flipDelivered(int warehouse_id, int customer_id, int station_id)
-	{
-		try 
-		{
-			String // sql command to set the delivered to 0
-		}
-	}
+	//
+	// public void flipDelivered(int warehouse_id, int customer_id, int station_id)
+	// {
+	// 	try
+	// 	{
+	// 		String // sql command to set the delivered to 0
+	// 	}
+	// }
 	
 	public void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge)
 	{
