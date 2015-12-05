@@ -15,7 +15,7 @@
 
 import java.sql.*;
 import java.math.*;
-import java.text.DecimalFormat;
+import java.text.*;
 import java.io.FileInputStream;
 import java.util.Scanner;
 import java.io.IOException;
@@ -25,12 +25,15 @@ import java.util.Random;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Date;
+import java.util.Calendar;
 
 public class DBLoader
 {
 	private Statement statement;
 	private PreparedStatement preparedStatement;
 	private Connection con;
+	private ResultSet resultSet;
     private String server;
 	private String username;
 	private String password;
@@ -53,8 +56,8 @@ public class DBLoader
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
     private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 30;
-    private int ITEMS = 10000;
+    private int CUSTOMERS_PER_STATION = 10;
+    private int ITEMS = 100;
     private final int MAX_ORDERS_PER_CUSTOMER = 100;
     private final int MIN_LINE_ITEMS_PER_ORDER = 5;
     private final int MAX_LINE_ITEMS_PER_ORDER = 15;
@@ -93,6 +96,7 @@ public class DBLoader
 
         // ask the user if they want to switch databases
         System.out.println("\nWelcome to the database loader!");
+		System.out.println("Today is " + getTodaysDate());
         System.out.println("\nThe default database is : " + SERVER_ADDR);
         System.out.print("Do you want to switch to a different database? (y/n): ");
         String answer = scan.nextLine();
@@ -605,7 +609,8 @@ public class DBLoader
                             insertOrders.setInt(3, currStationID);
                             insertOrders.setInt(4, currWarehouseID);
                             insertOrders.setString(5, theDate);
-                            insertOrders.setInt(6, Math.round(rand.nextFloat()));
+                            //insertOrders.setInt(6, Math.round(rand.nextFloat()));
+							insertOrders.setInt(6, 1);
                             insertOrders.setInt(7, lineCount);
                             insertOrders.addBatch();
 
@@ -742,7 +747,10 @@ public class DBLoader
     */
     public void newOrder(int warehouse, int station, int customer, int[] items, int[] counts, int totalItems)
     {
-        Random rand = new Random(System.nanoTime());
+        //Random rand = new Random(System.nanoTime());
+		Date date = getTodaysDate();
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		String dateString = df.format(date);
         String addOrderString = "insert into Orders (order_id, customer_id, station_id, warehouse_id, order_date, completed, line_item_count)"
         + "values (?, ?, ?, ?, ?, ?, ?)";
         String addLineItemString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
@@ -760,7 +768,7 @@ public class DBLoader
             addOrder.setInt(2, customer);
             addOrder.setInt(3, station);
             addOrder.setInt(4, warehouse);
-            addOrder.setString(5, getDate(rand));
+            addOrder.setString(5, dateString);
             addOrder.setInt(6, 0);
             addOrder.setInt(7, totalItems);
 
@@ -896,7 +904,7 @@ public class DBLoader
 	{
 		try 
 		{
-			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes
+			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes	
 			// get the most recent order here
 			String getOrderStatusString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and customer_id = ? and station_id = ?";
 			PreparedStatement getOrderStatus = con.prepareStatement(getOrderStatusString);
@@ -913,29 +921,156 @@ public class DBLoader
 		
 	}
 	
-	public void getDeliveryTransaction(int warehouse_id)
+	public void getDeliveryTransaction(int warehouse_id) 
 	{
-		/**
-		* 
-		* 1. flip the completed flag to 1 where it was zero for the warehouse = warehouse_id 
-		* 2. get the unique customer (customer_id and station_id combo)
-		* 3. adjust the balance in the unique customer (incrementBalance)
-		* 4. increment total_deliveries (updateDeliveries)
-		*  
-		**/
+		
+		try {
+				String theDeliveredString = "select * from Orders where completed =? and warehouse_id = ?";
+				PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
+				theDelivered.setInt(1, 0);
+				theDelivered.setInt(2, warehouse_id);
+				resultSet = theDelivered.executeQuery();
+				while (resultSet.next())
+				 {
+					 int order = resultSet.getInt(1);
+					 int customer = resultSet.getInt(2);
+					 int station = resultSet.getInt(3);
+					 int warehouse = resultSet.getInt(4);
+					 setCompleted(order, customer, station, warehouse); //set completed to 1
+					 addDeliveryDate(order,customer,station,warehouse); //add the delivery date
+					 updateDeliveries(warehouse, customer, station);//update the delivery count
+					 ResultSet rs = getCharge(order, customer, station, warehouse);
+					 while (rs.next())
+					 {
+						 BigDecimal cost = rs.getBigDecimal(1); //getting the cost per item
+						 int quantity = rs.getInt(2); // getting the quantity
+						 BigDecimal tax = getTax(station); //getting the tax
+						 BigDecimal total = calculateCost(quantity, cost, tax);
+						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
+					 }
+					 rs.close();
+			 	 }
+				 resultSet.close();
+			 }
+			 catch(SQLException e)
+			 {
+				 System.out.println("Error running the delivery transaction");
+				 System.exit(1);
+			 }
 			
 		
+	}
+	
+	public BigDecimal calculateCost(int quantity, BigDecimal itemPrice, BigDecimal tax)
+	{
+		BigDecimal itemCost = itemPrice.multiply(new BigDecimal(quantity));
+		BigDecimal totalCost = itemCost.multiply(tax);
+		
+		return totalCost;
+	}
+	
+	public void addDeliveryDate(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		Date date = getTodaysDate();
+		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+		String dateString = df.format(date);
+		try
+		{
+			String addDeliveryString = "update LineItems set delivery_date = ? where order_id=? and customer_id=? and station_id=? and warehouse_id=?";
+			PreparedStatement addDelivery = con.prepareStatement(addDeliveryString);
+			addDelivery.setString(1, dateString);
+			addDelivery.setInt(2, order_id);
+			addDelivery.setInt(3, customer_id);
+			addDelivery.setInt(4, station_id);
+			addDelivery.setInt(5, warehouse_id);
+			addDelivery.executeUpdate();
+			
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error adding the delivery date");
+			System.exit(1);
+		}
+	}
+
+	
+	public ResultSet getCharge(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		try 
+		{
+			String getChargeString = "select amount, quantity from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse = ?";
+			PreparedStatement getCharge = con.prepareStatement(getChargeString);
+			getCharge.setInt(1, order_id);
+			getCharge.setInt(2, customer_id);
+			getCharge.setInt(3, station_id);
+			getCharge.setInt(4, warehouse_id);
+			return getCharge.executeQuery();
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error getting charge");
+			return null;
+		}
+	}
+	
+	public BigDecimal getTax(int station_id)
+	{
+		BigDecimal rate = new BigDecimal(0);
+		try
+		{
+			String getTaxString = "select distinct tax_rate from Stations where station_id = ?";
+			PreparedStatement getTax = con.prepareStatement(getTaxString);
+			getTax.setInt(1, station_id);
+			resultSet = getTax.executeQuery();
+			rate = resultSet.getBigDecimal(1);
+			System.out.println("The rate is " + rate);
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error getting the tax rate");
+			System.exit(1);
+		}
+		return rate;
+	}
+	
+	public void setCompleted(int order_id, int customer_id, int station_id, int warehouse_id)
+	{
+		try 
+		{	
+			String setCompletedString = "update Orders set completed=1 where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
+			PreparedStatement setCompleted = con.prepareStatement(setCompletedString);
+			setCompleted.setInt(1, order_id);
+			setCompleted.setInt(2, customer_id);
+			setCompleted.setInt(3, station_id);
+			setCompleted.setInt(4, warehouse_id);
+			setCompleted.executeUpdate();
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error setting complete to 1");
+			System.exit(1);
+		}
+	}
+	
+	public Date getTodaysDate()
+	{
+		Date date = Calendar.getInstance().getTime();
+		// java.sql.Date sqlDate = new java.sql.Date(date.getTime());
+// 		System.out.println(date);
+// 		System.out.println("sqldate is " + sqlDate);
+		return date;
 	}
 	
 	public void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge)
 	{
 		
 		try {
-			String incrementBalanceString = "update Customers set balance = balance + ? where customer_id = ? and station_id = ?";
+			String incrementBalanceString = "update Customers set balance = balance + ? where warehouse_id = ? and customer_id = ? and station_id = ?";
 			PreparedStatement incrementBalance = con.prepareStatement(incrementBalanceString);
 			incrementBalance.setBigDecimal(1, charge);
-			incrementBalance.setInt(2, customer_id);
-			incrementBalance.setInt(3, station_id);
+			incrementBalance.setInt(2, warehouse_id);
+			incrementBalance.setInt(3, customer_id);
+			incrementBalance.setInt(4, station_id);
 			incrementBalance.executeUpdate();
 		} 
 		catch (SQLException e)
