@@ -50,6 +50,8 @@ public class DBLoader
     private HashMap<Integer, Float> itemCost;
     private int currWarehouseID, currStationID, currCustomerID;
     private HashMap<String, Integer> currOrderID, currLineID;
+    private String[] last20Orders;
+    private int last20Index = 0;
 
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
@@ -84,6 +86,7 @@ public class DBLoader
     {
         currOrderID = new HashMap<String, Integer>();
         currLineID = new HashMap<String, Integer>();
+        last20Orders = new String[20];
 
         ///////////////////////////////////
         // Load the data into the database
@@ -191,7 +194,6 @@ public class DBLoader
                 catch (NumberFormatException e)
                 {
                     System.out.println("Error parsing input. " + e.toString());
-                    System.exit(1);
                 }
             }
             else if (answer.toUpperCase().equals("P"))
@@ -212,7 +214,6 @@ public class DBLoader
 				catch (NumberFormatException e)
 				{
 					System.out.println("Error parsing input. " + e.toString());
-					System.exit(1);
 				}
 				
             }
@@ -234,7 +235,22 @@ public class DBLoader
             }
             else if (answer.toUpperCase().equals("L"))
             {
+                try
+                {
+                    System.out.print("Enter the warehouse ID: ");
+                    int warehouseNum = Integer.parseInt(scan.nextLine());
+                    System.out.print("Enter the station ID: ");
+                    int stationNum = Integer.parseInt(scan.nextLine());
+                    System.out.print("Enter the stock threshold: ");
+                    int thresholdNum = Integer.parseInt(scan.nextLine());
 
+                    int count = stockLevel(warehouseNum, stationNum, thresholdNum);
+                    System.out.println("Stock items in warehouse " + warehouseNum + " below threshold of " + thresholdNum + ": " + count);
+                }
+                catch (NumberFormatException e)
+                {
+                    System.out.println("Error parsing input. " + e.toString());
+                }
             }
             else if (!answer.toUpperCase().equals("Q"))
             {
@@ -599,6 +615,8 @@ public class DBLoader
 							insertOrders.setInt(6, 1);
                             insertOrders.setInt(7, lineCount);
                             insertOrders.addBatch();
+
+                            enqueueOrder(currWarehouseID, currStationID, currCustomerID, l);
 
                         }
                         //System.out.println("Orders statements created.");
@@ -1183,10 +1201,64 @@ public class DBLoader
     * @param threshold int containing the count threshold
     * @return int containing the number of items in the last 20 orders which fall below the threshold
     */
-    public int stockLevel(int station, int threshold)
+    public int stockLevel(int warehouse, int station, int threshold)
     {
-        String getLast20 = "select item_id from LineItems where order_id > ?";
-        return 0;
+        // use the queue of the last 20 orders to retrieve the items from the database
+        ResultSet[] results = new ResultSet[last20Orders.length];
+        String getLineString = "select item_id from LineItems " +
+            "where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
+        String getStockString = "select in_stock from StockItems " +
+            "where item_id = ? and warehouse_id = ?";
+        try
+        {
+            PreparedStatement getLine = con.prepareStatement(getLineString);
+
+            for (int i = 0; i < last20Orders.length; i++)
+            {
+                // parse the order string
+                String[] splitString = last20Orders[i].split("-");
+
+                // set up the statement
+                getLine.setString(1, splitString[3]);
+                getLine.setString(2, splitString[2]);
+                getLine.setInt(3, station);
+                getLine.setInt(4, warehouse);
+                results[i] = getLine.executeQuery();
+            }
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error retrieving LineItems from database. " + e.toString());
+        }
+
+        // walk through the result sets, querying the database for the stock of each line item in the warehouse
+        int underStockCount = 0;
+        try
+        {
+            PreparedStatement getStock = con.prepareStatement(getStockString);
+
+            for (int i = 0; i < results.length; i++)
+            {
+                while (results[i].next())
+                {
+                    // set up and execute the stock query
+                    getStock.setInt(1, results[i].getInt("item_id"));
+                    getStock.setInt(2, warehouse);
+                    ResultSet stockResults = getStock.executeQuery();
+
+                    // compare the stock number to the threshold, and increment the total if necessary
+                    stockResults.next();
+                    if (stockResults.getInt("in_stock") < threshold)
+                        underStockCount++;
+                }
+            }
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error retrieving stock values from database. " + e.toString());
+        }
+
+        return underStockCount;
     }
 	
 	
@@ -1486,6 +1558,12 @@ public class DBLoader
         gauss = gauss + AVE_ITEMS_IN_STOCK_PER_WAREHOUSE;
 
         return (int)Math.round(gauss);
+    }
+
+    private void enqueueOrder(int warehouse, int station, int customer, int order)
+    {
+        last20Orders[last20Index] = getOrderKey(warehouse, station, customer, order);
+        last20Index = (last20Index + 1) % last20Orders.length;
     }
 
     /**
