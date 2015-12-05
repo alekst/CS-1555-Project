@@ -33,7 +33,7 @@ public class DBLoader
 	private Statement statement;
 	private PreparedStatement preparedStatement;
 	private Connection con;
-	private ResultSet resultSet;
+	private ResultSet resultSet, rs;
     private String server;
 	private String username;
 	private String password;
@@ -228,7 +228,9 @@ public class DBLoader
             }
             else if (answer.toUpperCase().equals("D"))
             {
-
+				System.out.print("Enter the warehouse ID: ");
+				int warehouse = Integer.parseInt(scan.nextLine());
+				getDeliveryTransaction(warehouse); 
             }
             else if (answer.toUpperCase().equals("L"))
             {
@@ -924,8 +926,8 @@ public class DBLoader
 					 ResultSet rs = getCharge(order, customer, station, warehouse);
 					 while (rs.next())
 					 {
-						 BigDecimal cost = rs.getBigDecimal(1); //getting the cost per item
-						 int quantity = rs.getInt(2); // getting the quantity
+						 BigDecimal cost = rs.getBigDecimal(8); //getting the cost per item
+						 int quantity = rs.getInt(7); // getting the quantity
 						 BigDecimal tax = getTax(station); //getting the tax
 						 BigDecimal total = calculateCost(quantity, cost, tax);
 						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
@@ -977,22 +979,23 @@ public class DBLoader
 
 	
 	public ResultSet getCharge(int order_id, int customer_id, int station_id, int warehouse_id)
-	{
+	{ // I get the error getting charge when run this. 
 		try 
 		{
-			String getChargeString = "select amount, quantity from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse = ?";
+			String getChargeString = "select * from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse = ?";
 			PreparedStatement getCharge = con.prepareStatement(getChargeString);
 			getCharge.setInt(1, order_id);
 			getCharge.setInt(2, customer_id);
 			getCharge.setInt(3, station_id);
 			getCharge.setInt(4, warehouse_id);
-			return getCharge.executeQuery();
+			rs = getCharge.executeQuery();
 		}
 		catch(SQLException e)
 		{
 			System.out.println("Error getting charge");
-			return null;
+			System.exit(1);
 		}
+		return rs;
 	}
 	
 	public BigDecimal getTax(int station_id)
