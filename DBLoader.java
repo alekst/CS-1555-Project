@@ -41,7 +41,7 @@ public class DBLoader
     private Scanner scan;
     private final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private final String NUMBERS = "0123456789";
-    private final float TAXES = {0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15};
+    private final double[] TAXES = {0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15};
     private final String[] STREET_SUFFIXES = {"St.", "Ave.", "Rd.", "Way"};
     private final int MAX_ADDRESS = 2000;
     private final int NAME_MIN = 4;
@@ -60,7 +60,7 @@ public class DBLoader
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
     private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 10;
+    private int CUSTOMERS_PER_STATION = 30;
     private int ITEMS = 100;
     private final int MAX_ORDERS_PER_CUSTOMER = 100;
     private final int MIN_LINE_ITEMS_PER_ORDER = 5;
@@ -102,21 +102,25 @@ public class DBLoader
         System.out.println("\nWelcome to the database loader!");
 		System.out.println("Today is " + getTodaysDate());
         System.out.println("\nThe default database is : " + SERVER_ADDR);
-        System.out.print("Do you want to switch to a different database? (y/n): ");
+        System.out.print("If you wish to use a different database, enter the address now,\nor press enter to use the default: ");
         String answer = scan.nextLine();
 
-        if (answer.toUpperCase().equals("Y"))
+        if (!answer.equals(""))
         {
-            System.out.println("Ok, please enter the address of the server you want to use:");
-            server = scan.nextLine();
-
             do
             {
-                System.out.println("You entered: " + server);
+                System.out.println("You entered: " + answer);
                 System.out.print("Is this correct? (y/n): ");
                 answer = scan.nextLine();
+                server = answer;
+
+                if (answer.equals(""))
+                {
+                    System.out.println("Using default database.");
+                    server = SERVER_ADDR;
+                }
             }
-            while (answer.toUpperCase().equals("N"));
+            while (!answer.equals(""));
         }
         else
         {
@@ -143,6 +147,48 @@ public class DBLoader
       	// drop and recreate the tables
     	if (answer.toUpperCase().equals("Y"))
     	{
+            // ask for the number of warehouses, stations, customers, and items they want to create
+            boolean gotIt = false;
+            int oldWarehouses = WAREHOUSES;
+            int oldStations = STATIONS_PER_WAREHOUSE;
+            int oldCustomers = CUSTOMERS_PER_STATION;
+            int oldItems = ITEMS;
+            String readIn;
+            do
+            {
+                WAREHOUSES = oldWarehouses;
+                STATIONS_PER_WAREHOUSE = oldStations;
+                CUSTOMERS_PER_STATION = oldCustomers;
+                ITEMS = oldItems;
+                try
+                {
+                    System.out.print("Number of warehouses? (Enter for default of " + WAREHOUSES + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        WAREHOUSES = Integer.parseInt(readIn);
+                    System.out.print("Number of stations per warehouse? (Enter for default of "+ STATIONS_PER_WAREHOUSE + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        STATIONS_PER_WAREHOUSE = Integer.parseInt(readIn);
+                    System.out.print("Number of customers per station? (Enter for default of " + CUSTOMERS_PER_STATION + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        CUSTOMERS_PER_STATION = Integer.parseInt(readIn);
+                    System.out.print("Number of unique items? (Enter for default of " + ITEMS + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        ITEMS = Integer.parseInt(readIn);
+
+                    gotIt = true;
+                }
+                catch (NumberFormatException e)
+                {
+                    System.out.println("Invalid number format, whole integers only please.");
+                }
+            }
+            while (!gotIt);
+
+            // initialize the database
 			initDatabase();
     	}
 
@@ -168,7 +214,7 @@ public class DBLoader
             System.out.print("(c, p, s, d, l, q) ?: ");
             answer = scan.nextLine();
 
-
+            // create an order
             if (answer.toUpperCase().equals("C"))
             {
                 try
@@ -187,9 +233,9 @@ public class DBLoader
 
                     for (int i = 0; i < itemNum; i++)
                     {
-                        System.out.print("Item ID: ");
+                        System.out.print("Item " + (i + 1) + " ID: ");
                         items[i] = Integer.parseInt(scan.nextLine());
-                        System.out.print("Item count: ");
+                        System.out.print("Item " + (i + 1) + " count: ");
                         counts[i] = Integer.parseInt(scan.nextLine());
                     }
 
@@ -200,16 +246,19 @@ public class DBLoader
                     System.out.println("Error parsing input. " + e.toString());
                 }
             }
+
+
+            // process a payment
             else if (answer.toUpperCase().equals("P"))
             {
 				try
 				{
 					System.out.print("Enter the warehouse ID: ");
 					int warehouse = Integer.parseInt(scan.nextLine());
-					System.out.print("Enter the customer ID: ");
-					int customer = Integer.parseInt(scan.nextLine());
 					System.out.print("Enter the station ID: ");
 					int station = Integer.parseInt(scan.nextLine());
+                    System.out.print("Enter the customer ID: ");
+                    int customer = Integer.parseInt(scan.nextLine());
 					System.out.print("Enter the payment amount: ");
 					String ans = scan.nextLine();
 					BigDecimal payment = new BigDecimal(ans);
@@ -221,16 +270,19 @@ public class DBLoader
 				}
 				
             }
+
+
+            // check order status
             else if (answer.toUpperCase().equals("S"))
             {
 				try
 				{
 					System.out.print("Enter the warehouse ID: ");
 					int warehouse = Integer.parseInt(scan.nextLine());
+                    System.out.print("Enter the station ID: ");
+                    int station = Integer.parseInt(scan.nextLine());
 					System.out.print("Enter the customer ID: ");
 					int customer = Integer.parseInt(scan.nextLine());
-					System.out.print("Enter the station ID: ");
-					int station = Integer.parseInt(scan.nextLine());
 					getOrderStatus(warehouse, station, customer);
 				}
 				catch (NumberFormatException e)
@@ -238,12 +290,18 @@ public class DBLoader
 					System.out.println("Error parsing input " + e.toString());
 				}
             }
+
+
+            // warehouse delivery
             else if (answer.toUpperCase().equals("D"))
             {
 				System.out.print("Enter the warehouse ID: ");
 				int warehouse = Integer.parseInt(scan.nextLine());
 				getDeliveryTransaction(warehouse); 
             }
+
+
+            // check stock level
             else if (answer.toUpperCase().equals("L"))
             {
                 try
@@ -468,7 +526,7 @@ public class DBLoader
             System.exit(1);
 		}
 
-        System.out.println("Tables successfully created.");
+        System.out.println("Tables successfully created.\n");
     }
 
 
@@ -546,7 +604,7 @@ public class DBLoader
                 insertItems.setString(3, twoDecimals(cost));
                 insertItems.addBatch();
             }
-            System.out.println("Items statements created.");
+            //System.out.println("Items statements created.");
 
             // generate the warehouses
             for (currWarehouseID = 1; currWarehouseID <= WAREHOUSES; currWarehouseID++)
@@ -567,14 +625,13 @@ public class DBLoader
                     insertStockItems.setString(5, "0");
                     insertStockItems.addBatch();
                 }
-                System.out.println("StockItems statements created.");
+                //System.out.println("StockItems statements created.");
 
                 // generate the stations
                 for (currStationID = 1; currStationID <= STATIONS_PER_WAREHOUSE; currStationID++)
                 {
                     stationTotal = 0;
-                    String 
-                    float taxRate = getRandomTax(rand);
+                    double taxRate = getRandomTax(rand);
 
                     // generate the customers
                     for (currCustomerID = 1; currCustomerID <= CUSTOMERS_PER_STATION; currCustomerID++)
@@ -598,7 +655,7 @@ public class DBLoader
                             {
                                 int itemID = rand.nextInt(ITEMS) + 1;
                                 int itemCount = rand.nextInt(10) + 1;
-                                float lineTotal = (itemCost.get(itemID).floatValue() * itemCount) * taxRate;
+                                double lineTotal = (itemCost.get(itemID).floatValue() * itemCount) * taxRate;
                                 customerTotal += lineTotal;
 
                                 // update the hashmaps to reflect the sold and order numbers
@@ -623,7 +680,6 @@ public class DBLoader
                             insertOrders.setInt(3, currStationID);
                             insertOrders.setInt(4, currWarehouseID);
                             insertOrders.setString(5, theDate);
-                            //insertOrders.setInt(6, Math.round(rand.nextFloat()));
 							insertOrders.setInt(6, 1);
                             insertOrders.setInt(7, lineCount);
                             insertOrders.addBatch();
@@ -820,7 +876,8 @@ public class DBLoader
             currOrderID.put(getCustomerKey(warehouse, station, customer), temp + 1);
             currLineID.put(getOrderKey(warehouse, station, customer, thisOrderID), thisLineID);
 
-            System.out.println("Order successfully placed");
+            System.out.println("Order number " + thisOrderID + " successfully placed for:");
+            System.out.println("customer " + customer + " of station " + station + ", warehouse " + warehouse);
         }
         catch (SQLException e)
         {
@@ -889,13 +946,13 @@ public class DBLoader
 			System.exit(1);
 		}
 		decrementBalance(warehouse_id, customer_id, station_id, payment);
-		System.out.println("Updating balance");
+		System.out.println("Updated balance");
 		updatePaidAmount(warehouse_id, customer_id, station_id, payment);
-		System.out.println("Updating paid amount");
+		System.out.println("Updated paid amount");
 		updateTotalPayments(warehouse_id, customer_id, station_id);
-		System.out.println("Updating total payments");
+		System.out.println("Updated total payments");
 		updateYTDSales(warehouse_id, station_id, payment);
-		System.out.println("Updating year to date sales");
+		System.out.println("Updated year to date sales");
 		try
 		{
 			String commitString = "commit";
@@ -919,15 +976,15 @@ public class DBLoader
 		try 
 		{
 			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes	
-			resultSet = getMostRecentOrders(warehouse_id, station_id, customer_id);
-			while (resultSet.next())
+			ResultSet rs1 = getMostRecentOrders(warehouse_id, station_id, customer_id);
+			while (rs1.next())
 			{
-				int order_id = resultSet.getInt(1);
+				int order_id = rs1.getInt(1);
 				//System.out.println("order id is " + order_id);
 				//System.out.println("getting the order details for the order number " + order_id + " customer id " + customer_id + " station_id " + station_id + " warehouse_id " + warehouse_id);
 				getOrderDetails(order_id, customer_id, station_id, warehouse_id);
 			}
-			resultSet.close();
+			rs1.close();
 		}
 		
 		catch (SQLException e)
@@ -940,7 +997,7 @@ public class DBLoader
 	
 	public void getOrderDetails(int order_id, int customer_id, int station_id, int warehouse_id)
 	{
-		System.out.println("checking on the order details for the order number " + order_id);
+		System.out.println("Checking on the order details for the order number " + order_id);
 		String getOrderDetailsString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and station_id = ? and customer_id = ? and order_id = ?";
 		try 
 		{
@@ -959,9 +1016,8 @@ public class DBLoader
 				System.out.print("\t\t" + cf.format(resultSet.getBigDecimal(3)));
 				System.out.println("\t\t" + resultSet.getString(4));
 			}
-			resultSet.close(); 
+			resultSet.close();
 		}
-		
 		catch (SQLException e)
 		{
 			System.out.println("Error getting order details " + e.toString());
@@ -987,7 +1043,9 @@ public class DBLoader
 		
 		try
 		{
-			String getMostRecentOrdersString = "select * from Orders where order_date in (select max(order_date) from Orders where warehouse_id = ? and station_id=? and customer_id= ? ) and warehouse_id = ? and station_id = ? and customer_id = ? ";
+			String getMostRecentOrdersString = "select * from Orders where order_date in" +
+                "(select max(order_date) from Orders where warehouse_id = ? and station_id=? and customer_id= ? )" +
+                "and warehouse_id = ? and station_id = ? and customer_id = ? ";
 			PreparedStatement getMostRecentOrders = con.prepareStatement(getMostRecentOrdersString);
 			getMostRecentOrders.setInt(1, warehouse_id);
 			getMostRecentOrders.setInt(2, station_id);
@@ -1014,42 +1072,40 @@ public class DBLoader
 	
 	public void getDeliveryTransaction(int warehouse_id) 
 	{
-		
-		try {
-				String theDeliveredString = "select * from Orders where completed =? and warehouse_id = ?";
-				PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
-				theDelivered.setInt(1, 0);
-				theDelivered.setInt(2, warehouse_id);
-				resultSet = theDelivered.executeQuery();
-				while (resultSet.next())
-				 {
-					 int order = resultSet.getInt(1);
-					 int customer = resultSet.getInt(2);
-					 int station = resultSet.getInt(3);
-					 int warehouse = resultSet.getInt(4);
-					 setCompleted(order, customer, station, warehouse); //set completed to 1
-					 addDeliveryDate(order,customer,station,warehouse); //add the delivery date
-					 updateDeliveries(warehouse, customer, station);//update the delivery count
-					 ResultSet rs = getCharge(order, customer, station, warehouse);
-					 while (rs.next())
-					 {
-						 BigDecimal cost = rs.getBigDecimal(8); //getting the amount
-						 //int quantity = rs.getInt(7); // getting the quantity
-						 BigDecimal tax = getTax(station); //getting the tax
-						 BigDecimal total = calculateCost(cost, tax);
-						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
-					 }
-					 rs.close();
-			 	 }
-				 resultSet.close();
-			 }
-			 catch(SQLException e)
+    	try
+        {
+			String theDeliveredString = "select * from Orders where completed = ? and warehouse_id = ?";
+			PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
+			theDelivered.setInt(1, 0);
+			theDelivered.setInt(2, warehouse_id);
+			resultSet = theDelivered.executeQuery();
+			while (resultSet.next())
 			 {
-				 System.out.println("Error running the delivery transaction");
-				 System.exit(1);
-			 }
-			
-		
+				 int order = resultSet.getInt(1);
+				 int customer = resultSet.getInt(2);
+				 int station = resultSet.getInt(3);
+				 int warehouse = resultSet.getInt(4);
+				 setCompleted(order, customer, station, warehouse); //set completed to 1
+				 addDeliveryDate(order,customer,station,warehouse); //add the delivery date
+				 updateDeliveries(warehouse, customer, station);//update the delivery count
+				 ResultSet rs = getCharge(order, customer, station, warehouse);
+				 while (rs.next())
+				 {
+					 BigDecimal cost = rs.getBigDecimal(8); //getting the amount
+					 //int quantity = rs.getInt(7); // getting the quantity
+					 BigDecimal tax = getTax(station); //getting the tax
+					 BigDecimal total = calculateCost(cost, tax);
+					 incrementBalance(warehouse, customer, station, total); //increment customer's balance
+				 }
+				 rs.close();
+		 	 }
+			 resultSet.close();
+		 }
+		 catch(SQLException e)
+		 {
+			 System.out.println("Error running the delivery transaction");
+			 System.exit(1);
+		 }
 	}
 	
 	public BigDecimal calculateCost(BigDecimal amount, BigDecimal tax)
@@ -1455,11 +1511,11 @@ public class DBLoader
     /**
     * Returns a random tax rate
     * @param rand Random number generator object
-    * @return String containing the tax rate
+    * @return double containing the tax rate
     */
-    private float getRandomTax(Random rand)
+    private double getRandomTax(Random rand)
     {
-        return TAXES[rand.nextInt(TAXES.length)]);
+        return TAXES[rand.nextInt(TAXES.length)];
     }
 
     /**
@@ -1630,6 +1686,16 @@ public class DBLoader
             endIndex--;
         }
         return sb.substring(0, endIndex);
+    }
+
+    /**
+    * Rounds the passed value to two decimal places and returns it as a string
+    * @param value double value to be rounded
+    * @return String containing the rounded value
+    */
+    private String twoDecimals(double value)
+    {
+        return twoDecimals((float)value);
     }
 
     /**
