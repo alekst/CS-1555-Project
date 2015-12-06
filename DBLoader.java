@@ -39,6 +39,7 @@ public class DBLoader
 	private String username;
 	private String password;
     private Scanner scan;
+    private String startTransaction = "SET TRANSACTION READ WRITE";
     private final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private final String NUMBERS = "0123456789";
     private final double[] TAXES = {0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15};
@@ -368,7 +369,6 @@ public class DBLoader
     public void initDatabase()
     {
 		System.out.println("creating tables...");
-		String startTransaction = "SET TRANSACTION READ WRITE";
         String[] dropStatements = new String[7];
 
 		dropStatements[0] = "drop table Warehouses cascade constraints";
@@ -748,6 +748,8 @@ public class DBLoader
         // execute the batch inserts
         try
         {
+            statement.executeUpdate(startTransaction);
+
             insertItems.executeBatch();
             System.out.println("Items inserted");
             insertWarehouses.executeBatch();
@@ -762,6 +764,16 @@ public class DBLoader
             System.out.println("Orders inserted");
             insertLineItems.executeBatch();
             System.out.println("LineItems inserted");
+
+            insertItems.close();
+            insertWarehouses.close();
+            insertStockItems.close();
+            insertStations.close();
+            insertCustomers.close();
+            insertOrders.close();
+            insertLineItems.close();
+
+            statement.executeUpdate("COMMIT");
         }
         catch (SQLException e)
         {
@@ -786,10 +798,18 @@ public class DBLoader
                 itemsSold.setInt(2, i);
                 orderCount.setInt(1, orderQuant);
                 orderCount.setInt(2, i);
-                itemsSold.execute();
-                orderCount.execute();
+                itemsSold.addBatch();
+                orderCount.addBatch();
             }
 
+            // execute update queries
+            statement.executeUpdate(startTransaction);
+            itemsSold.executeBatch();
+            orderCount.executeBatch();
+            itemsSold.close();
+            orderCount.close();
+            statement.executeUpdate("COMMIT");
+            statement.close();
             System.out.println("StockItem counts successfully updated.");
         }
         catch (SQLException e)
@@ -825,6 +845,16 @@ public class DBLoader
         + "values (?, ?, ?, ?, ?, ?, ?)";
         String addLineItemString = "insert into LineItems (line_id, order_id, customer_id, station_id, warehouse_id, item_id, quantity, amount, delivery_date)"
         + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try
+        {
+            statement = con.createStatement();
+            statement.executeUpdate(startTransaction);
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error creating statement");
+        }
 
         try
         {
@@ -870,6 +900,11 @@ public class DBLoader
             // execute the statements
             addOrder.execute();
             addLineItem.executeBatch();
+
+            statement.executeUpdate("COMMIT");
+            addOrder.close();
+            addLineItem.close();
+            statement.close();
 
             // update the order and line numbers for that customer
             Integer temp = currOrderID.remove(getCustomerKey(warehouse, station, customer));
@@ -925,6 +960,8 @@ public class DBLoader
         updateStock.setInt(4, item);
         updateStock.setInt(5, warehouse);
         updateStock.execute();
+
+        updateStock.close();
     }
 
 	/*
@@ -1373,6 +1410,8 @@ public class DBLoader
                 getLine.setInt(4, warehouse);
                 results[i] = getLine.executeQuery();
             }
+
+            getLine.close();
         }
         catch (SQLException e)
         {
@@ -1398,7 +1437,16 @@ public class DBLoader
                     stockResults.next();
                     if (stockResults.getInt("in_stock") < threshold)
                         underStockCount++;
+
+                    stockResults.close();
                 }
+            }
+
+            // close the result sets
+            getStock.close();
+            for (int i = 0; i < results.length; i++)
+            {
+                results[i].close();
             }
         }
         catch (SQLException e)
