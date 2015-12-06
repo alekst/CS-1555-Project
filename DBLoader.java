@@ -954,7 +954,7 @@ public class DBLoader
 			while (resultSet.next())
 			{
 				System.out.print("" + resultSet.getInt(1));
-				System.out.print("\t\t\t" + resultSet.getInt(2));
+				System.out.print("\t\t" + resultSet.getInt(2));
 				System.out.print("\t\t" + cf.format(resultSet.getBigDecimal(3)));
 				System.out.println("\t\t" + resultSet.getString(4));
 			}
