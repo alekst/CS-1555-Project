@@ -1012,7 +1012,7 @@ public class DBLoader
 			System.exit(1);
 		}
 		System.out.println("Ending the transaction");
-		System.out.println("Here is the post-payment account status");
+		System.out.println("Here is the post-payment account status:");
 		showAccountStatus(warehouse_id, station_id, customer_id);
 	}
 	
@@ -1057,14 +1057,12 @@ public class DBLoader
 	{
 		try 
 		{
-			System.out.println("Getting order status for " + customer_id + " from the station " + station_id); //mostly for debugging purposes	
+			System.out.println("Getting order status for " + customer_id + " from the station " + station_id + "of the warehouse " + warehouse_id); //mostly for debugging purposes	
 			ResultSet rs1 = getMostRecentOrders(warehouse_id, station_id, customer_id);
 			while (rs1.next())
 			{
 				int order_id = rs1.getInt(1);
 				String order_date = rs1.getString(5);
-				//System.out.println("order id is " + order_id);
-				//System.out.println("getting the order details for the order number " + order_id + " customer id " + customer_id + " station_id " + station_id + " warehouse_id " + warehouse_id);
 				getOrderDetails(order_id, customer_id, station_id, warehouse_id, order_date);
 			}
 			rs1.close();
