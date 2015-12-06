@@ -211,8 +211,9 @@ public class DBLoader
             System.out.println("s - Check on the status of a recent order");
             System.out.println("d - Perform a warehouse delivery");
             System.out.println("l - Check the stock level of a station");
+			System.out.println("r - Rebuild the database");
             System.out.println("q - Quit");
-            System.out.print("(c, p, s, d, l, q) ?: ");
+            System.out.print("(c, p, s, d, l, r, q) ?: ");
             answer = scan.nextLine();
 
             // create an order
@@ -322,6 +323,13 @@ public class DBLoader
                     System.out.println("Error parsing input. " + e.toString());
                 }
             }
+			//reinitializes the database (Hi, Nick!)
+			else if (answer.toUpperCase().equals("R"))
+			{
+				initDatabase();
+				populateTables();
+			}
+			
             else if (!answer.toUpperCase().equals("Q"))
             {
                 System.out.println("Invalid input, please try again.\n");
@@ -970,6 +978,8 @@ public class DBLoader
 	public void processPayment(int warehouse_id, int customer_id, int station_id, BigDecimal payment) 
 	{
 		System.out.println("Starting to process payment transaction for customer " + customer_id + " of station " + station_id);
+		System.out.println("Here is the pre-payment account status:");
+		showAccountStatus(warehouse_id, station_id, customer_id);
 		try 
 		{
 			String startTransactionString = "set transaction read write";
@@ -982,14 +992,14 @@ public class DBLoader
 			System.out.println("Error starting the transation");
 			System.exit(1);
 		}
-		decrementBalance(warehouse_id, customer_id, station_id, payment);
 		System.out.println("Updated balance");
-		updatePaidAmount(warehouse_id, customer_id, station_id, payment);
+		decrementBalance(warehouse_id, customer_id, station_id, payment);
 		System.out.println("Updated paid amount");
-		updateTotalPayments(warehouse_id, customer_id, station_id);
+		updatePaidAmount(warehouse_id, customer_id, station_id, payment);
 		System.out.println("Updated total payments");
-		updateYTDSales(warehouse_id, station_id, payment);
+		updateTotalPayments(warehouse_id, customer_id, station_id);
 		System.out.println("Updated year to date sales");
+		updateYTDSales(warehouse_id, station_id, payment);
 		try
 		{
 			String commitString = "commit";
@@ -999,6 +1009,41 @@ public class DBLoader
 		catch (SQLException e)
 		{
 			System.out.println("Error committing the transaction");
+			System.exit(1);
+		}
+		System.out.println("Ending the transaction");
+		System.out.println("Here is the post-payment account status");
+		showAccountStatus(warehouse_id, station_id, customer_id);
+	}
+	
+	public void showAccountStatus(int warehouse_id, int station_id, int customer_id)
+	{
+		//System.out.println("The following is the account status for the customer " + customer_id + " of the station " + station_id + " of the warehouse " + warehouse_id);
+		String getAccountStatusString = "select * from Customers where warehouse_id = ? and station_id = ? and customer_id = ?";
+		try
+		{
+			PreparedStatement getAccountStatus = con.prepareStatement(getAccountStatusString);
+			getAccountStatus.setInt(1, warehouse_id);
+			getAccountStatus.setInt(2, station_id);
+			getAccountStatus.setInt(3, customer_id);
+			resultSet = getAccountStatus.executeQuery();
+			while (resultSet.next())
+			{
+				String name = resultSet.getString(4) + " " + resultSet.getString(5) + " " + resultSet.getString(6);
+				String address = resultSet.getString(7) + " " + resultSet.getString(8) + ", " + resultSet.getString(9) + " " + resultSet.getString(10);
+				System.out.print("Name: " + name + "\n" + address + "\n");
+				System.out.println("Discount....." + resultSet.getDouble(13)); 
+				System.out.println("Balance......" + cf.format(resultSet.getBigDecimal(14))); 
+				System.out.println("Paid Amount.." + cf.format(resultSet.getBigDecimal(15)));
+				System.out.println("Payments....." + resultSet.getInt(16));
+				System.out.println("Deliveries..." + resultSet.getInt(17));
+			}
+			resultSet.close();
+			
+		}
+		catch(SQLException e)
+		{
+			System.out.println("Error getting account details " + e.toString());
 			System.exit(1);
 		}
 	}
@@ -1017,9 +1062,10 @@ public class DBLoader
 			while (rs1.next())
 			{
 				int order_id = rs1.getInt(1);
+				String order_date = rs1.getString(5);
 				//System.out.println("order id is " + order_id);
 				//System.out.println("getting the order details for the order number " + order_id + " customer id " + customer_id + " station_id " + station_id + " warehouse_id " + warehouse_id);
-				getOrderDetails(order_id, customer_id, station_id, warehouse_id);
+				getOrderDetails(order_id, customer_id, station_id, warehouse_id, order_date);
 			}
 			rs1.close();
 		}
@@ -1032,9 +1078,9 @@ public class DBLoader
 		
 	}
 	
-	public void getOrderDetails(int order_id, int customer_id, int station_id, int warehouse_id)
+	public void getOrderDetails(int order_id, int customer_id, int station_id, int warehouse_id, String order_date)
 	{
-		System.out.println("Checking on the order details for the order number " + order_id);
+		System.out.println("Checking on the order details for the order number " + order_id + " placed on " + order_date);
 		String getOrderDetailsString = "select item_id, quantity, amount, delivery_date from LineItems where warehouse_id =? and station_id = ? and customer_id = ? and order_id = ?";
 		try 
 		{
@@ -1044,12 +1090,12 @@ public class DBLoader
 			preparedStatement.setInt(3, customer_id);
 			preparedStatement.setInt(4, order_id);
 			resultSet = preparedStatement.executeQuery();
-			System.out.println("Item number \t Quantity \t Amount Due \t Delivery Date\t");
-			System.out.println("---------- \t --------- \t -----------\t -------------\t");
+			System.out.println("Item number \t Quantity \t Amount Due \t Delivery Date\t ");
+			System.out.println("---------- \t --------- \t -----------\t -------------\t ");
 			while (resultSet.next())
 			{
 				System.out.print("" + resultSet.getInt(1));
-				System.out.print("\t\t" + resultSet.getInt(2));
+				System.out.print("\t\t " + resultSet.getInt(2));
 				System.out.print("\t\t" + cf.format(resultSet.getBigDecimal(3)));
 				System.out.println("\t\t" + resultSet.getString(4));
 			}
@@ -1109,6 +1155,7 @@ public class DBLoader
 	
 	public void getDeliveryTransaction(int warehouse_id) 
 	{
+		System.out.println("Preparing the delivery transaction...");
     	try
         {
 			String theDeliveredString = "select * from Orders where completed = ? and warehouse_id = ?";
@@ -1116,26 +1163,40 @@ public class DBLoader
 			theDelivered.setInt(1, 0);
 			theDelivered.setInt(2, warehouse_id);
 			resultSet = theDelivered.executeQuery();
-			while (resultSet.next())
-			 {
-				 int order = resultSet.getInt(1);
-				 int customer = resultSet.getInt(2);
-				 int station = resultSet.getInt(3);
-				 int warehouse = resultSet.getInt(4);
-				 setCompleted(order, customer, station, warehouse); //set completed to 1
-				 addDeliveryDate(order,customer,station,warehouse); //add the delivery date
-				 updateDeliveries(warehouse, customer, station);//update the delivery count
-				 ResultSet rs = getCharge(order, customer, station, warehouse);
-				 while (rs.next())
+			if (!resultSet.isBeforeFirst() ) {    
+			 System.out.println("All line items in this warehouses have been delivered. No new deliveries will be made."); 
+			} 
+			else
+			{
+				while (resultSet.next())
 				 {
-					 BigDecimal cost = rs.getBigDecimal(8); //getting the amount
-					 //int quantity = rs.getInt(7); // getting the quantity
-					 BigDecimal tax = getTax(station); //getting the tax
-					 BigDecimal total = calculateCost(cost, tax);
-					 incrementBalance(warehouse, customer, station, total); //increment customer's balance
-				 }
-				 rs.close();
-		 	 }
+					 int order = resultSet.getInt(1);
+					 int customer = resultSet.getInt(2);
+					 int station = resultSet.getInt(3);
+					 int warehouse = resultSet.getInt(4);
+					 setCompleted(order, customer, station, warehouse); //set completed to 1
+					 addDeliveryDate(order,customer,station, warehouse); //add the delivery date
+					 updateDeliveries(warehouse, customer, station);//update the delivery count
+					 System.out.println("The following line items for the order " + order + " have been delivered and added to the customer's total:");
+					 System.out.println("item id\t quantity   amount    tax rate \t tax amount \t total \t delivery date" );
+					 System.out.println("-------\t --------   ------    -------- \t ---------- \t ----- \t -------------" );
+					 ResultSet rs = getCharge(order, customer, station, warehouse);
+					 while (rs.next())
+					 {
+						 System.out.print("  " + rs.getInt(6) + "\t  " + rs.getInt(7) + "\t\t");
+						 BigDecimal cost = rs.getBigDecimal(8); //getting the amount
+						 System.out.print(cf.format(cost) + "\t   ");
+						 //int quantity = rs.getInt(7); // getting the quantity
+						 BigDecimal tax = getTax(station); //getting the tax
+						 BigDecimal tax_amount = cost.multiply(tax);//tax amount
+						 System.out.print(tax + "\t\t  "+ cf.format(tax_amount) + "\t\t ");
+						 BigDecimal total = calculateCost(cost, tax);
+						 System.out.print(cf.format(total) + "\t    " + rs.getString(9) + "  \n");
+						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
+					 }
+					 rs.close();
+			 	 }
+			 }
 			 resultSet.close();
 		 }
 		 catch(SQLException e)
@@ -1158,6 +1219,7 @@ public class DBLoader
 		Date date = getTodaysDate();
 		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 		String dateString = df.format(date);
+		//System.out.println("Adding today's date of " + dateString + " to the database");
 		try
 		{
 			String addDeliveryString = "update LineItems set delivery_date = ? where order_id=? and customer_id=? and station_id=? and warehouse_id=?";
@@ -1172,14 +1234,15 @@ public class DBLoader
 		}
 		catch(SQLException e)
 		{
-			System.out.println("Error adding the delivery date");
+			System.out.println("Error adding the delivery date" + e.toString());
 			System.exit(1);
 		}
 	}
 
 	
 	public ResultSet getCharge(int order_id, int customer_id, int station_id, int warehouse_id)
-	{ // I get the error getting charge when run this. 
+	{ 
+		//System.out.println("Getting the charge for the order number " + order_id + " of the customer number " + customer_id + " in the station " + station_id + "of the warehouse " + warehouse_id);
 		try 
 		{
 			String getChargeString = "select * from LineItems where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
@@ -1211,7 +1274,7 @@ public class DBLoader
 			{
 				rate = resultSet.getBigDecimal(8);
 			}
-			System.out.println("The rate is " + rate);
+			//System.out.println("The rate is " + rate);
 		}
 		catch(SQLException e)
 		{
@@ -1223,6 +1286,7 @@ public class DBLoader
 	
 	public void setCompleted(int order_id, int customer_id, int station_id, int warehouse_id)
 	{
+		//System.out.println("Updating the order of id " + order_id + " to complete.");
 		try 
 		{	
 			String setCompletedString = "update Orders set completed=1 where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
@@ -1252,6 +1316,7 @@ public class DBLoader
 	public void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge)
 	{
 		
+		
 		try {
 			String incrementBalanceString = "update Customers set balance = balance + ? where warehouse_id = ? and customer_id = ? and station_id = ?";
 			PreparedStatement incrementBalance = con.prepareStatement(incrementBalanceString);
@@ -1270,11 +1335,13 @@ public class DBLoader
 	
 	public void updateDeliveries(int warehouse_id, int customer_id, int station_id)
 	{
+		System.out.println("Incrementing the total deliveries for the customer number " + customer_id + "of the station " + station_id + " in the warehouse " + warehouse_id);
 		try {
-			String updateDeliveriesString = "update Customers set total_deliveries = total_deliveries + 1 where customer_id = ? and station_id = ?";
+			String updateDeliveriesString = "update Customers set total_deliveries = total_deliveries + 1 where warehouse_id = ? and customer_id = ? and station_id = ?";
 			PreparedStatement updateDeliveries = con.prepareStatement(updateDeliveriesString);
-			updateDeliveries.setInt(1, customer_id);
-			updateDeliveries.setInt(2, station_id);
+			updateDeliveries.setInt(1, warehouse_id);
+			updateDeliveries.setInt(2, customer_id);
+			updateDeliveries.setInt(3, station_id);
 			updateDeliveries.executeUpdate();
 		}
 		catch (SQLException e)
