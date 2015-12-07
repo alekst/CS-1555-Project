@@ -93,6 +93,7 @@ public class DBLoader
         currLineID = new HashMap<String, Integer>();
         
 
+
         ///////////////////////////////////
         // Load the data into the database
         ///////////////////////////////////
