@@ -1527,7 +1527,7 @@ public class DBLoader
 
     /**
     * Returns a count of the number of stocked items in the passed station's 20 most recent orders
-    * are under the passed threshold
+    * are under the passed threshold (3.5 in the Milestone 2 document)
     * @param station int containing the stationID
     * @param threshold int containing the count threshold
     * @return int containing the number of items in the last 20 orders which fall below the threshold
