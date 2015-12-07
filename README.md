@@ -9,7 +9,7 @@ The constructor of this object contains the main running code of the program.
 
 The constructor gets credential and preference input from the user, and then calls the
 initDatabase() and populateTables() methods to create the tables, and populate them with
-randomly generated data. The default setting of the preference is the one set out in the Milestone 2 document:
+randomly generated data. The preference's default setting is established in the Milestone 2 document:
 
 	* 1 warehouse
 	* 8 distribution stations per warehouse
