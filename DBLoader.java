@@ -61,7 +61,7 @@ public class DBLoader
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
     private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 300;
+    private int CUSTOMERS_PER_STATION = 3000;
     private int ITEMS = 10000;
     private final int MAX_ORDERS_PER_CUSTOMER = 100;
     private final int MIN_LINE_ITEMS_PER_ORDER = 5;
@@ -874,7 +874,7 @@ public class DBLoader
 *********************************************************************************************************************************************/
 
     /**
-    * Creates a new order with the passed information
+    * Creates a new order with the passed information (3.1 in the milestone description document)
     * @param warehouse int containing the warehouse_id
     * @param station int containing the station_id
     * @param customer int containing the customer_id for the new order
@@ -1015,6 +1015,7 @@ public class DBLoader
 
 	/*
     * processes the Payment, updates appropriate tuples, uses BigDecimal for payment as it is recommended to be used with currencies
+	* (3.2 in the milestone description document)
     */
 	public void processPayment(int warehouse_id, int customer_id, int station_id, BigDecimal payment) 
 	{
@@ -1057,6 +1058,11 @@ public class DBLoader
 		showAccountStatus(warehouse_id, station_id, customer_id);
 	}
 	
+	/* 
+	* A helper method. Used in processPayment method. 	
+	* Displays the customer's account status, which includes the customer's name, discount, balance, paid amount, the number of payments and deliveries
+	*/ 
+	
 	public void showAccountStatus(int warehouse_id, int station_id, int customer_id)
 	{
 		//System.out.println("The following is the account status for the customer " + customer_id + " of the station " + station_id + " of the warehouse " + warehouse_id);
@@ -1090,9 +1096,9 @@ public class DBLoader
 	}
 	
 	/**
-	* Order status transaction 
-	* @param customer_id, station_id
-	* returns the table of the order status
+	* The main method for the Order status transaction (3.3 in the milestone 2 description document) 
+	* @param warehouse_id, station_id, customer_id
+	* prints the table of the order status
 	*/
 	public void getOrderStatus(int warehouse_id, int station_id, int customer_id)
 	{
@@ -1117,6 +1123,10 @@ public class DBLoader
 		
 	}
 	
+	/** 
+	* A helper method. Used in getOrderStatus() method
+	* Gathers and displays the details of a specific order
+ 	*/
 	public void getOrderDetails(int order_id, int customer_id, int station_id, int warehouse_id, String order_date)
 	{
 		System.out.println("Checking on the order details for the order number " + order_id + " placed on " + order_date);
@@ -1158,7 +1168,11 @@ public class DBLoader
 		}
 
 	}
-	
+	/**
+	* A helper method. Used in getOrderStatus() method
+	* Returns a ResultSet object containing the information for the most recent order. 
+	*
+	*/
 	public ResultSet getMostRecentOrders(int warehouse_id, int station_id, int customer_id)
 	{
 		System.out.println("Getting the most recent order... ");
@@ -1192,6 +1206,10 @@ public class DBLoader
 		return resultSet;
 	}
 	
+	/**
+	* The main method for the Delivery Transaction (3.4 in the Milestone 2 document)
+	* Processes the delivery for the whole warehouse. 
+	*/
 	public void getDeliveryTransaction(int warehouse_id) 
 	{
 		System.out.println("Preparing the delivery transaction...");
@@ -1245,6 +1263,9 @@ public class DBLoader
 		 }
 	}
 	
+	/**
+	* A helper method used to calculate the price with the tax. 
+	*/
 	public BigDecimal calculateCost(BigDecimal amount, BigDecimal tax)
 	{
 		BigDecimal taxAmount = amount.multiply(tax);
@@ -1253,6 +1274,9 @@ public class DBLoader
 		return totalCost;
 	}
 	
+	/**
+	* A helper method used to add the delivery date to the LineItems of the Order
+	*/
 	public void addDeliveryDate(int order_id, int customer_id, int station_id, int warehouse_id)
 	{
 		Date date = getTodaysDate();
@@ -1278,7 +1302,9 @@ public class DBLoader
 		}
 	}
 
-	
+	/* A helper method. Gets the amount to charge the customer.
+	*
+	*/
 	public ResultSet getCharge(int order_id, int customer_id, int station_id, int warehouse_id)
 	{ 
 		//System.out.println("Getting the charge for the order number " + order_id + " of the customer number " + customer_id + " in the station " + station_id + "of the warehouse " + warehouse_id);
@@ -1299,6 +1325,9 @@ public class DBLoader
 		}
 		return rs;
 	}
+	/*
+	* A helper method. Returns the tax rate for a distribution station
+	*/
 	
 	public BigDecimal getTax(int station_id)
 	{
@@ -1322,6 +1351,9 @@ public class DBLoader
 		}
 		return rate;
 	}
+	/* 
+	* A helper method. Flips the completed attribute to 1(true) in the Orders table to keep track of completed orders.
+	*/
 	
 	public void setCompleted(int order_id, int customer_id, int station_id, int warehouse_id)
 	{
@@ -1343,6 +1375,9 @@ public class DBLoader
 		}
 	}
 	
+	/* 
+	* A helper method. It returns the current date as the Date object
+	*/
 	public Date getTodaysDate()
 	{
 		Date date = Calendar.getInstance().getTime();
@@ -1352,10 +1387,12 @@ public class DBLoader
 		return date;
 	}
 	
+	/* 
+	* A helper method. It adds the current order charge to the customer's total
+	*/
 	public void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge)
 	{
-		
-		
+			
 		try {
 			String incrementBalanceString = "update Customers set balance = balance + ? where warehouse_id = ? and customer_id = ? and station_id = ?";
 			PreparedStatement incrementBalance = con.prepareStatement(incrementBalanceString);
@@ -1371,6 +1408,9 @@ public class DBLoader
 			System.exit(1);
 		}
 	}
+	/*
+	* A helper method. It increments the number of deliveries by one
+	*/
 	
 	public void updateDeliveries(int warehouse_id, int customer_id, int station_id)
 	{
@@ -1391,7 +1431,7 @@ public class DBLoader
 	}
 	
 	/**
-	* Updates the outstanding balance based on the payment amount
+	* Decrements the outstanding balance based on the payment amount
 	* @param customer_id, station_id and payment
 	*/
 	public void decrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal payment)
@@ -1433,7 +1473,7 @@ public class DBLoader
 	}
 	
 	/**
-	*	Triggers to updates the year to date sales in a warehouse and in a station
+	* A helper method. Updates the year to date sales in a warehouse and in a station
 	*/
 
 	public void updateYTDSales(int warehouse_id, int station_id, BigDecimal amount)
@@ -1466,7 +1506,7 @@ public class DBLoader
 		}
 	
 	/**
-	* Increments number of payments made for a customer 
+	* A helper method. Increments number of payments made for a customer 
 	*/
 	public void updateTotalPayments(int warehouse_id, int customer_id, int station_id)
 	{
