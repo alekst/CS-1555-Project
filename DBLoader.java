@@ -6,7 +6,7 @@
 * Clint Wadley
 * cvw5@pitt.edu
 *
-* 11/18/15
+* 12/6/15
 * CS1555
 * Term Project
 *
@@ -52,8 +52,8 @@ public class DBLoader
     private HashMap<Integer, Float> itemCost;
     private int currWarehouseID, currStationID, currCustomerID;
     private HashMap<String, Integer> currOrderID, currLineID;
-    private String[] last20Orders;
-    private int last20Index = 0;
+    private String[][][] last20Orders;
+    private int[][] last20Index;
 	
 	Locale currentLocale = Locale.getDefault();
 	NumberFormat cf = NumberFormat.getCurrencyInstance(currentLocale); //currency formatter
@@ -61,14 +61,14 @@ public class DBLoader
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
     private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 30;
-    private int ITEMS = 100;
+    private int CUSTOMERS_PER_STATION = 300;
+    private int ITEMS = 10000;
     private final int MAX_ORDERS_PER_CUSTOMER = 100;
     private final int MIN_LINE_ITEMS_PER_ORDER = 5;
     private final int MAX_LINE_ITEMS_PER_ORDER = 15;
     private final int AVE_ITEMS_IN_STOCK_PER_WAREHOUSE = 100;
     private final int MIN_ITEMS_IN_STOCK_PER_WAREHOUSE = 1;
-    private final int MAX_ITEMA_IN_STOCK_PER_WAREHOUSE = 200;
+    //private final int MAX_ITEMS_IN_STOCK_PER_WAREHOUSE = 200;
     
 
     // address of the server
@@ -91,7 +91,7 @@ public class DBLoader
     {
         currOrderID = new HashMap<String, Integer>();
         currLineID = new HashMap<String, Integer>();
-        last20Orders = new String[20];
+        
 
         ///////////////////////////////////
         // Load the data into the database
@@ -189,6 +189,15 @@ public class DBLoader
             }
             while (!gotIt);
 
+            last20Orders = new String[WAREHOUSES][STATIONS_PER_WAREHOUSE][20];
+            last20Index = new int[WAREHOUSES][STATIONS_PER_WAREHOUSE];
+
+            for (int i = 0; i < last20Index.length; i++)
+            {
+                for (int j = 0; j < last20Index[i].length; j++)
+                    last20Index[i][j] = 0;
+            }
+
             // initialize the database
 			initDatabase();
     	}
@@ -205,7 +214,8 @@ public class DBLoader
 
         do
         {
-            System.out.println("\n What would you like to do?");
+            System.out.println("\nWhat would you like to do?");
+            System.out.println("-------------------------------------------");
             System.out.println("c - Create a new order");
             System.out.println("p - Process a payment");
             System.out.println("s - Check on the status of a recent order");
@@ -316,7 +326,8 @@ public class DBLoader
                     int thresholdNum = Integer.parseInt(scan.nextLine());
 
                     int count = stockLevel(warehouseNum, stationNum, thresholdNum);
-                    System.out.println("Stock items in warehouse " + warehouseNum + " below threshold of " + thresholdNum + ": " + count);
+                    System.out.println("\nStock items from the last 20 orders of station " + stationNum + " in warehouse " + warehouseNum);
+                    System.out.println("which are below the threshold of " + thresholdNum + ": " + count);
                 }
                 catch (NumberFormatException e)
                 {
@@ -350,6 +361,20 @@ public class DBLoader
         scan.close();
 	}
 
+
+
+
+
+
+
+
+
+
+
+
+/********************************************************************************************************************************************
+* Methods for the intialization of the database - Milestone 1
+*********************************************************************************************************************************************/
     /**
     * Opens a connection to the database server
     * @return Connection object representing the open connection
@@ -373,10 +398,12 @@ public class DBLoader
         return connection;
     }
 
-
+    /**
+    * Creates the tables in the database
+    */
     public void initDatabase()
     {
-		System.out.println("creating tables...");
+		System.out.println("\ncreating tables...");
         String[] dropStatements = new String[7];
 
 		dropStatements[0] = "drop table Warehouses cascade constraints";
@@ -455,8 +482,8 @@ public class DBLoader
 			"item_id number(15) not null, " +
             "warehouse_id number(3), " +
 			"in_stock number(20), " +
-			"sold_this_year number(10), " +
-			"included_in_orders number(4), " +
+			"sold_this_year number(15), " +
+			"included_in_orders number(15), " +
 			"constraint StockItems_pk primary key(item_id, warehouse_id), " +
             "constraint StockItems_fk1 foreign key(item_id) references Items(item_id), " +
 			"constraint StockItems_fk2 foreign key(warehouse_id) references Warehouses(warehouse_id) )";
@@ -544,6 +571,7 @@ public class DBLoader
     */
     private void populateTables()
     {
+        System.out.println("Generating data...");
         // define the insert statements
         String warehousesString = "insert into Warehouses (warehouse_id, name, address, city, state, zip, tax_rate, sum_sales)"
         + "values (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -595,9 +623,9 @@ public class DBLoader
 
         // HashMaps are used to keep track of item costs, item order counts, and ytd sold counts.
         // this enables us to update the counts without querying the database
-        HashMap<Integer, Integer> ytdSoldCounts = new HashMap<Integer, Integer>();
-        HashMap<Integer, Integer> itemOrderCounts = new HashMap<Integer, Integer>();
-        itemCost = new HashMap<Integer, Float>();
+        HashMap<Integer, Integer> ytdSoldCounts = new HashMap<Integer, Integer>(ITEMS);
+        HashMap<Integer, Integer> itemOrderCounts = new HashMap<Integer, Integer>(ITEMS);
+        itemCost = new HashMap<Integer, Float>(ITEMS);
         try
         {
             // generate the items
@@ -793,6 +821,7 @@ public class DBLoader
         // update the item order count and sold count on each item
         try
         {
+            System.out.println("Updating StockItem counts...");
             String itemsSoldString = "update StockItems set sold_this_year = ? where item_id = ?";
             String orderCountString = "update StockItems set included_in_orders = ? where item_id = ?";
             PreparedStatement itemsSold = con.prepareStatement(itemsSoldString);
@@ -800,11 +829,9 @@ public class DBLoader
 
             for (int i = 1; i <= ITEMS; i++)
             {
-                int soldQuant = ytdSoldCounts.get(i).intValue();
-                int orderQuant = itemOrderCounts.get(i).intValue();
-                itemsSold.setInt(1, soldQuant);
+                itemsSold.setInt(1, ytdSoldCounts.get(i).intValue());
                 itemsSold.setInt(2, i);
-                orderCount.setInt(1, orderQuant);
+                orderCount.setInt(1, itemOrderCounts.get(i).intValue());
                 orderCount.setInt(2, i);
                 itemsSold.addBatch();
                 orderCount.addBatch();
@@ -830,9 +857,20 @@ public class DBLoader
     }
 	
 
-    /********************************************
-    * Methods for executing the transactions
-    *********************************************/
+
+
+
+
+
+
+
+
+
+
+
+/********************************************************************************************************************************************
+* Methods for executing transations - Milestone 2
+*********************************************************************************************************************************************/
 
     /**
     * Creates a new order with the passed information
@@ -913,6 +951,8 @@ public class DBLoader
             addOrder.close();
             addLineItem.close();
             statement.close();
+
+            enqueueOrder(warehouse, station, customer, thisOrderID);
 
             // update the order and line numbers for that customer
             Integer temp = currOrderID.remove(getCustomerKey(warehouse, station, customer));
@@ -1178,20 +1218,20 @@ public class DBLoader
 					 addDeliveryDate(order,customer,station, warehouse); //add the delivery date
 					 updateDeliveries(warehouse, customer, station);//update the delivery count
 					 System.out.println("The following line items for the order " + order + " have been delivered and added to the customer's total:");
-					 System.out.println("item id\t quantity   amount    tax rate \t tax amount \t total \t delivery date" );
-					 System.out.println("-------\t --------   ------    -------- \t ---------- \t ----- \t -------------" );
+					 System.out.println("item id\tquantity\tamount\ttax rate\ttax amount\ttotal\tdelivery date" );
+					 System.out.println("-------\t--------\t------\t--------\t----------\t-----\t-------------" );
 					 ResultSet rs = getCharge(order, customer, station, warehouse);
 					 while (rs.next())
 					 {
-						 System.out.print("  " + rs.getInt(6) + "\t  " + rs.getInt(7) + "\t\t");
+						 System.out.print(rs.getInt(6) + "\t" + rs.getInt(7) + "\t\t");
 						 BigDecimal cost = rs.getBigDecimal(8); //getting the amount
-						 System.out.print(cf.format(cost) + "\t   ");
+						 System.out.print(cf.format(cost) + "\t");
 						 //int quantity = rs.getInt(7); // getting the quantity
 						 BigDecimal tax = getTax(station); //getting the tax
 						 BigDecimal tax_amount = cost.multiply(tax);//tax amount
-						 System.out.print(tax + "\t\t  "+ cf.format(tax_amount) + "\t\t ");
+						 System.out.print(tax + "\t\t"+ cf.format(tax_amount) + "\t\t");
 						 BigDecimal total = calculateCost(cost, tax);
-						 System.out.print(cf.format(total) + "\t    " + rs.getString(9) + "  \n");
+						 System.out.print(cf.format(total) + "\t" + rs.getString(9) + "\n");
 						 incrementBalance(warehouse, customer, station, total); //increment customer's balance
 					 }
 					 rs.close();
@@ -1456,19 +1496,22 @@ public class DBLoader
     public int stockLevel(int warehouse, int station, int threshold)
     {
         // use the queue of the last 20 orders to retrieve the items from the database
-        ResultSet[] results = new ResultSet[last20Orders.length];
+        ResultSet[] results = new ResultSet[last20Orders[warehouse - 1][station - 1].length];
         String getLineString = "select item_id from LineItems " +
             "where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
         String getStockString = "select in_stock from StockItems " +
             "where item_id = ? and warehouse_id = ?";
+
+
+        PreparedStatement getLine = null;
         try
         {
-            PreparedStatement getLine = con.prepareStatement(getLineString);
+            getLine = con.prepareStatement(getLineString);
 
-            for (int i = 0; i < last20Orders.length; i++)
+            for (int i = 0; i < last20Orders[warehouse - 1][station - 1].length; i++)
             {
                 // parse the order string
-                String[] splitString = last20Orders[i].split("-");
+                String[] splitString = last20Orders[warehouse - 1][station - 1][i].split("-");
 
                 // set up the statement
                 getLine.setString(1, splitString[3]);
@@ -1477,8 +1520,6 @@ public class DBLoader
                 getLine.setInt(4, warehouse);
                 results[i] = getLine.executeQuery();
             }
-
-            getLine.close();
         }
         catch (SQLException e)
         {
@@ -1487,9 +1528,11 @@ public class DBLoader
 
         // walk through the result sets, querying the database for the stock of each line item in the warehouse
         int underStockCount = 0;
+        PreparedStatement getStock = null;
+        ResultSet stockResults = null;
         try
         {
-            PreparedStatement getStock = con.prepareStatement(getStockString);
+            getStock = con.prepareStatement(getStockString);
 
             for (int i = 0; i < results.length; i++)
             {
@@ -1498,7 +1541,7 @@ public class DBLoader
                     // set up and execute the stock query
                     getStock.setInt(1, results[i].getInt("item_id"));
                     getStock.setInt(2, warehouse);
-                    ResultSet stockResults = getStock.executeQuery();
+                    stockResults = getStock.executeQuery();
 
                     // compare the stock number to the threshold, and increment the total if necessary
                     stockResults.next();
@@ -1511,10 +1554,12 @@ public class DBLoader
 
             // close the result sets
             getStock.close();
+            getLine.close();
             for (int i = 0; i < results.length; i++)
             {
                 results[i].close();
             }
+            
         }
         catch (SQLException e)
         {
@@ -1525,7 +1570,13 @@ public class DBLoader
     }
 	
 	
-    
+
+
+
+
+/********************************************************************************************************************************************
+* Various helper methods for generating the data and executing the transations
+*********************************************************************************************************************************************/
 
     /**
     * Generates and returns a random alphanumeric name of length between
@@ -1839,8 +1890,8 @@ public class DBLoader
     */
     private void enqueueOrder(int warehouse, int station, int customer, int order)
     {
-        last20Orders[last20Index] = getOrderKey(warehouse, station, customer, order);
-        last20Index = (last20Index + 1) % last20Orders.length;
+        last20Orders[warehouse - 1][station - 1][last20Index[warehouse - 1][station - 1]] = getOrderKey(warehouse, station, customer, order);
+        last20Index[warehouse - 1][station - 1] = (last20Index[warehouse - 1][station - 1] + 1) % last20Orders[warehouse - 1][station - 1].length;
     }
 
     /**
