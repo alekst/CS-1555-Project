@@ -59,15 +59,15 @@ public class DBLoader
 	NumberFormat cf = NumberFormat.getCurrencyInstance(currentLocale); //currency formatter
 
     // constants defining the amount of data to generate
-    private int WAREHOUSES = 1;
-    private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 100;
-    private int ITEMS = 1000;
-    private final int MAX_ORDERS_PER_CUSTOMER = 50;
-    private final int MIN_LINE_ITEMS_PER_ORDER = 3;
-    private final int MAX_LINE_ITEMS_PER_ORDER = 10;
-    private final int AVE_ITEMS_IN_STOCK_PER_WAREHOUSE = 100;
-    private final int MIN_ITEMS_IN_STOCK_PER_WAREHOUSE = 1;
+    public int WAREHOUSES = 1;
+    public int STATIONS_PER_WAREHOUSE = 8;
+    public int CUSTOMERS_PER_STATION = 100;
+    public int ITEMS = 1000;
+    public final int MAX_ORDERS_PER_CUSTOMER = 50;
+    public final int MIN_LINE_ITEMS_PER_ORDER = 3;
+    public final int MAX_LINE_ITEMS_PER_ORDER = 10;
+    public final int AVE_ITEMS_IN_STOCK_PER_WAREHOUSE = 100;
+    public final int MIN_ITEMS_IN_STOCK_PER_WAREHOUSE = 1;
     //private final int MAX_ITEMS_IN_STOCK_PER_WAREHOUSE = 200;
     
 
