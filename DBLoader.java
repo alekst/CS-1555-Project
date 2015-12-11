@@ -35,7 +35,7 @@ public class DBLoader
 	private PreparedStatement preparedStatement;
 	private Connection con;
 	private ResultSet resultSet, rs;
-    private String server;
+    public String server;
 	public String username;
 	public String password;
     private Scanner scan;

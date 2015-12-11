@@ -1,5 +1,6 @@
 import java.sql.*;
 import oracle.jdbc.OracleStatement;
+import oracle.jdbc.pool.*;
 
 public class ThreadEx extends Thread
 {
@@ -7,10 +8,8 @@ public class ThreadEx extends Thread
 	
 	int m_myId;
 	
-	static int c_nextID = 0;
-	static boolean share_connection = true;
-	
-	
+	static int c_nextId = 0;
+	static boolean share_connection = true;	
 	
 	synchronized static int getNextId()
 	{
@@ -37,16 +36,14 @@ public class ThreadEx extends Thread
     // 	         System.out.println
     // 	                ("All threads will be sharing the same connection");
     // 	      }
-  
+		  DBLoader db = new DBLoader();
 	      // get a shared connection
-	      if (share_connection) 
-	      {
-	          OracleDataSource ods = new OracleDataSource();          
-			  ods.setURL("jdbc:oracle:" +args[1]);          
-			  ods.setUser("scott");          
-			  ods.setPassword("tiger");          
-			  Connection s_conn = ods.getConnection();
-	      }
+          OracleDataSource ods = new OracleDataSource();          
+		  ods.setURL(db.server);          
+		  ods.setUser(db.username);          
+		  ods.setPassword(db.password);          
+		  Connection s_conn = ods.getConnection();
+		  
 	      // Create the threads
 	      Thread[] threadList = new Thread[NUM_OF_THREADS];
 
@@ -85,6 +82,26 @@ public class ThreadEx extends Thread
 		//Assign an ID to the thread
 		m_myId = getNextId();
 	}
+	
+	public void run()
+	  {
+	    ResultSet resultSet   = null;
+	    Statement  statement = null;
+
+	    try
+	    {    
+	      // Using shared connection
+		  // Instantiate items and counts arrays
+		  int[] items = {2, 3}; 
+		  int[] counts = {2, 2};
+		  
+		  while (!getGreenLight())
+	        yield();
+          
+		  db.newOrder(1, 1, 1, items, counts, 4);
+	     
+	  }
+  	}
 	
 	
 	static boolean greenLight = false;
