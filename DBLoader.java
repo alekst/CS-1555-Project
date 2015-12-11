@@ -913,11 +913,6 @@ public class DBLoader
 
         try
         {
-            save = con.setSavepoint();
-            con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-            statement = con.createStatement();
-            statement.executeUpdate(startTransaction);
-
             // prepare the statements
             PreparedStatement addOrder = con.prepareStatement(addOrderString);
             PreparedStatement addLineItem = con.prepareStatement(addLineItemString);
@@ -936,6 +931,7 @@ public class DBLoader
 
             // iterate through items array and prepare the lineItem batch
             int thisLineID = 1;
+            PreparedStatement updateStock = null;
             for (int i = 0; i < items.length; i++)
             {
                 float lineTotal = itemCost.get(items[i]).floatValue() * counts[i];
@@ -954,13 +950,21 @@ public class DBLoader
                 thisLineID++;
 
                 // decrement the stock values of the warehouse
-                updateStock(warehouse, items[i], counts[i]);
+                updateStock = updateStock(warehouse, items[i], counts[i], updateStock);
             }
 
+            // set up the transaction
+            save = con.setSavepoint();
+            statement = con.createStatement();
+            con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            statement.executeUpdate("SET TRANSACTION READ WRITE");
+
             // execute the statements
+            updateStock.execute();
             addOrder.execute();
             addLineItem.executeBatch();
 
+            // commit the transaction
             statement.executeUpdate("COMMIT");
             addOrder.close();
             addLineItem.close();
@@ -1002,11 +1006,10 @@ public class DBLoader
     * @param item int containing the item_id
     * @param count int containing the item count to be decremented
     */
-    private void updateStock(int warehouse, int item, int count) throws SQLException
+    private PreparedStatement updateStock(int warehouse, int item, int count) throws SQLException
     {
         String getCountsString = "select in_stock, sold_this_year, included_in_orders " +
             "from StockItems where item_id = ? and warehouse_id = ?";
-        
         String updateStockString = "update StockItems set in_stock = ?, sold_this_year = ?, included_in_orders = ? " +
             "where item_id = ? and warehouse_id = ?";
 
@@ -1028,15 +1031,15 @@ public class DBLoader
         newSold = newSold + count;
         newOrders++;
 
-        // execute the update
+        // add the values to the batch
         updateStock.setInt(1, newStock);
         updateStock.setInt(2, newSold);
         updateStock.setInt(3, newOrders);
         updateStock.setInt(4, item);
         updateStock.setInt(5, warehouse);
-        updateStock.execute();
+        updateStock.addBatch();
 
-        updateStock.close();
+        return updateStock;
     }
 
 	/*
@@ -1048,31 +1051,35 @@ public class DBLoader
 		Savepoint save = null;
 		try 
 		{
-            save = con.setSavepoint();
-			String startTransactionString = "set transaction read write";
-            con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-			PreparedStatement startTransaction = con.prepareStatement(startTransactionString);
-			startTransaction.execute();
-			System.out.println("Starting the transaction");
-
             System.out.println("Starting to process payment transaction for customer " + customer_id + " of station " + station_id);
             System.out.println("Here is the pre-payment account status:");
             showAccountStatus(warehouse_id, station_id, customer_id);
-    		System.out.println("Updated balance");
-    		decrementBalance(warehouse_id, customer_id, station_id, payment);
-    		System.out.println("Updated paid amount");
-    		updatePaidAmount(warehouse_id, customer_id, station_id, payment);
-    		System.out.println("Updated total payments");
-    		updateTotalPayments(warehouse_id, customer_id, station_id);
-    		System.out.println("Updated year to date sales");
-    		updateYTDSales(warehouse_id, station_id, payment);
+
+            PreparedStatement updateBalance = decrementBalance(warehouse_id, customer_id, station_id, payment, updateBalance);
+            PreparedStatement updatePaidAmount = updatePaidAmount(warehouse_id, customer_id, station_id, payment);
+            PreparedStatement updateTotalPayments = updateTotalPayments(warehouse_id, customer_id, station_id);
+            PreparedStatement updateYTDSales = updateYTDSales(warehouse_id, station_id, payment);
+
+    		
+            // set the transaction
+            save = con.setSavepoint();
+            con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            Statement startTransaction = con.createStatement();
+            startTransaction.executeUpdate("set transaction read write");
+
+            // execute the statements
+            updateBalance.executeBatch();
+            updatePaidAmount.executeBatch();
+            updateTotalPayments.executeBatch();
+            updateYTDSales.executeBatch();
+
+            // commit the transaction
+            String commitString = "commit";
+            PreparedStatement commit = con.prepareStatement(commitString);
+            commit.execute();
 
             System.out.println("Here is the post-payment account status:");
             showAccountStatus(warehouse_id, station_id, customer_id);
-
-			String commitString = "commit";
-			PreparedStatement commit = con.prepareStatement(commitString);
-			commit.execute();
 
             System.out.println("\n---------------------------------------------------");
             System.out.println("Process payment transaction committed successfully.");
@@ -1131,12 +1138,15 @@ public class DBLoader
         Savepoint save = null;
 		try 
 		{
+            // set transaction and execute
             save = con.setSavepoint();
             con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             Statement stmt = con.createStatement();
             stmt.executeUpdate("SET TRANSACTION READ ONLY");
-			System.out.println("Getting order status for " + customer_id + " from the station " + station_id + "of the warehouse " + warehouse_id); //mostly for debugging purposes	
+			//System.out.println("Getting order status for " + customer_id + " from the station " + station_id + "of the warehouse " + warehouse_id); //mostly for debugging purposes	
 			ResultSet rs1 = getMostRecentOrders(warehouse_id, station_id, customer_id);
+            con.commit();
+            
 			while (rs1.next())
 			{
 				int order_id = rs1.getInt(1);
@@ -1144,7 +1154,6 @@ public class DBLoader
 				getOrderDetails(order_id, customer_id, station_id, warehouse_id, order_date);
 			}
 			rs1.close();
-            con.commit();
 
             System.out.println("\n---------------------------------------------");
             System.out.println("Order status transaction committed successfully.");
@@ -1421,64 +1430,74 @@ public class DBLoader
 	* Decrements the outstanding balance based on the payment amount
 	* @param customer_id, station_id and payment
 	*/
-	private void decrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal payment) throws SQLException
+	private PreparedStatement decrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal payment) throws SQLException
 	{
 		String updateBalanceString = "update Customers set balance = balance - ? where customer_id = ? and station_id = ?";
 		PreparedStatement updateBalance = con.prepareStatement(updateBalanceString);
 		updateBalance.setBigDecimal(1, payment);
 		updateBalance.setInt(2, customer_id);
 		updateBalance.setInt(3, station_id);
-		updateBalance.executeUpdate();
+        updateBalance.addBatch();
+
+        return updateBalance;
 	}
 
 	/**
 	* Updates the amount paid for the year 
 	*/
-	private void updatePaidAmount(int warehouse_id, int customer_id, int station_id, BigDecimal payment) throws SQLException
+	private PreparedStatement updatePaidAmount(int warehouse_id, int customer_id, int station_id, BigDecimal payment) throws SQLException
 	{
 		String updatePaidAmountString = "update Customers set paid_amount = paid_amount + ? where customer_id = ? and station_id = ?";
 		PreparedStatement updatePaidAmount = con.prepareStatement(updatePaidAmountString);
 		updatePaidAmount.setBigDecimal(1, payment);
 		updatePaidAmount.setInt(2, customer_id);
 		updatePaidAmount.setInt(3, station_id);
-		updatePaidAmount.executeUpdate();
+        updatePaidAmount.addBatch();
+		
+        return updatePaidAmount;
 	}
 	
 	/**
 	* A helper method. Updates the year to date sales in a warehouse and in a station
 	*/
 
-	private void updateYTDSales(int warehouse_id, int station_id, BigDecimal amount) throws SQLException
+	private PreparedStatement updateYTDSales(int warehouse_id, int station_id, BigDecimal amount) throws SQLException
 	{
 		HashMap<String, String> data = new HashMap<String, String>();
 		data.put("Warehouses", "warehouse_id");
 		data.put("Stations", "station_id");
 
 		Iterator<String> keySetIterator = data.keySet().iterator();
+        String updateYTDSalesString = "update ? set sum_sales = sum_sales + ? where ? = ?";
+        PreparedStatement updateYTDSales = con.prepareStatement(updateYTDSalesString);
 		while(keySetIterator.hasNext())
 			{
 				String key = keySetIterator.next();
-				String updateYTDSalesString = "update " + key + " set sum_sales = sum_sales + ? where " + data.get(key) + " = ?";
-				PreparedStatement updateYTDSales = con.prepareStatement(updateYTDSalesString);
-				updateYTDSales.setBigDecimal(1, amount);
+                updateYTDSales.setString(1, key);
+                updateYTDSales.setString(2, data.get(key));
+				updateYTDSales.setBigDecimal(3, amount);
 				if (data.get(key).compareTo("warehouse_id") == 0)
-					updateYTDSales.setInt(2, warehouse_id);
+					updateYTDSales.setInt(4, warehouse_id);
 				else if (data.get(key).compareTo("station_id") == 0)
-					updateYTDSales.setInt(2, station_id);
-				updateYTDSales.executeUpdate();
+					updateYTDSales.setInt(4, station_id);
+				updateYTDSales.addBatch();
 			}
+
+        return updateYTDSales;
 	}
 	
 	/**
 	* A helper method. Increments number of payments made for a customer 
 	*/
-	private void updateTotalPayments(int warehouse_id, int customer_id, int station_id) throws SQLException
+	private PreparedStatement updateTotalPayments(int warehouse_id, int customer_id, int station_id) throws SQLException
 	{
 		String updateTotalPaymentsString = "update Customers set total_payments = total_payments + 1 where customer_id = ? and station_id = ?";
 		PreparedStatement updateTotalPayments = con.prepareStatement(updateTotalPaymentsString);
 		updateTotalPayments.setInt(1, customer_id);
 		updateTotalPayments.setInt(2, station_id);
-		updateTotalPayments.executeUpdate();
+        updateTotalPayments.addBatch();
+		
+        return updateTotalPayments;
 	}
 
 
