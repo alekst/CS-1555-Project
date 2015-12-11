@@ -61,11 +61,11 @@ public class DBLoader
     // constants defining the amount of data to generate
     private int WAREHOUSES = 1;
     private int STATIONS_PER_WAREHOUSE = 8;
-    private int CUSTOMERS_PER_STATION = 3000;
-    private int ITEMS = 10000;
-    private final int MAX_ORDERS_PER_CUSTOMER = 100;
-    private final int MIN_LINE_ITEMS_PER_ORDER = 5;
-    private final int MAX_LINE_ITEMS_PER_ORDER = 15;
+    private int CUSTOMERS_PER_STATION = 100;
+    private int ITEMS = 1000;
+    private final int MAX_ORDERS_PER_CUSTOMER = 50;
+    private final int MIN_LINE_ITEMS_PER_ORDER = 3;
+    private final int MAX_LINE_ITEMS_PER_ORDER = 10;
     private final int AVE_ITEMS_IN_STOCK_PER_WAREHOUSE = 100;
     private final int MIN_ITEMS_IN_STOCK_PER_WAREHOUSE = 1;
     //private final int MAX_ITEMS_IN_STOCK_PER_WAREHOUSE = 200;
@@ -79,7 +79,7 @@ public class DBLoader
     */
     public static void main(String[] args)
     {
-        new DBLoader();
+        new DBLoader(true);
     }
 	
 
@@ -87,16 +87,11 @@ public class DBLoader
     * Constructor for the DBLoader. Opens the database connection with the
     * credentials passed from the user.
     */
-	public DBLoader()
+	public DBLoader(boolean askForParameters)
     {
         currOrderID = new HashMap<String, Integer>();
         currLineID = new HashMap<String, Integer>();
         
-
-
-        ///////////////////////////////////
-        // Load the data into the database
-        ///////////////////////////////////
 
         scan = new Scanner(System.in);
 
@@ -146,6 +141,10 @@ public class DBLoader
         System.out.print("\nDo you want to create or recreate the tables in the database? (y/n): ");
         answer = scan.nextLine();
 
+        ///////////////////////////////////
+        // Load the data into the database
+        ///////////////////////////////////
+
       	// drop and recreate the tables
     	if (answer.toUpperCase().equals("Y"))
     	{
@@ -156,39 +155,48 @@ public class DBLoader
             int oldCustomers = CUSTOMERS_PER_STATION;
             int oldItems = ITEMS;
             String readIn;
-            do
-            {
-                WAREHOUSES = oldWarehouses;
-                STATIONS_PER_WAREHOUSE = oldStations;
-                CUSTOMERS_PER_STATION = oldCustomers;
-                ITEMS = oldItems;
-                try
-                {
-                    System.out.print("Number of warehouses? (Enter for default of " + WAREHOUSES + "): ");
-                    readIn = scan.nextLine();
-                    if (!readIn.equals(""))
-                        WAREHOUSES = Integer.parseInt(readIn);
-                    System.out.print("Number of stations per warehouse? (Enter for default of "+ STATIONS_PER_WAREHOUSE + "): ");
-                    readIn = scan.nextLine();
-                    if (!readIn.equals(""))
-                        STATIONS_PER_WAREHOUSE = Integer.parseInt(readIn);
-                    System.out.print("Number of customers per station? (Enter for default of " + CUSTOMERS_PER_STATION + "): ");
-                    readIn = scan.nextLine();
-                    if (!readIn.equals(""))
-                        CUSTOMERS_PER_STATION = Integer.parseInt(readIn);
-                    System.out.print("Number of unique items? (Enter for default of " + ITEMS + "): ");
-                    readIn = scan.nextLine();
-                    if (!readIn.equals(""))
-                        ITEMS = Integer.parseInt(readIn);
 
-                    gotIt = true;
-                }
-                catch (NumberFormatException e)
+            // ask for user input if askForParameters is true
+            if (askForParameters)
+            {
+                do
                 {
-                    System.out.println("Invalid number format, whole integers only please.");
+                    WAREHOUSES = oldWarehouses;
+                    STATIONS_PER_WAREHOUSE = oldStations;
+                    CUSTOMERS_PER_STATION = oldCustomers;
+                    ITEMS = oldItems;
+                    try
+                    {
+                        System.out.print("Number of warehouses? (Enter for default of " + WAREHOUSES + "): ");
+                        readIn = scan.nextLine();
+                        if (!readIn.equals(""))
+                            WAREHOUSES = Integer.parseInt(readIn);
+                        System.out.print("Number of stations per warehouse? (Enter for default of "+ STATIONS_PER_WAREHOUSE + "): ");
+                        readIn = scan.nextLine();
+                        if (!readIn.equals(""))
+                            STATIONS_PER_WAREHOUSE = Integer.parseInt(readIn);
+                        System.out.print("Number of customers per station? (Enter for default of " + CUSTOMERS_PER_STATION + "): ");
+                        readIn = scan.nextLine();
+                        if (!readIn.equals(""))
+                            CUSTOMERS_PER_STATION = Integer.parseInt(readIn);
+                        System.out.print("Number of unique items? (Enter for default of " + ITEMS + "): ");
+                        readIn = scan.nextLine();
+                        if (!readIn.equals(""))
+                            ITEMS = Integer.parseInt(readIn);
+
+                        gotIt = true;
+                    }
+                    catch (NumberFormatException e)
+                    {
+                        System.out.println("Invalid number format, whole integers only please.");
+                    }
                 }
+                while (!gotIt);
             }
-            while (!gotIt);
+            else
+            {
+                System.out.println("Using default values to populate database.");
+            }
 
             last20Orders = new String[WAREHOUSES][STATIONS_PER_WAREHOUSE][20];
             last20Index = new int[WAREHOUSES][STATIONS_PER_WAREHOUSE];
@@ -880,7 +888,7 @@ public class DBLoader
     * @param customer int containing the customer_id for the new order
     * @param items int array containing the item numbers in the order
     * @param counts int array containing the item counts in the order
-    * @param totalCount int containing the total number of line items
+    * @param totalCount int containing the sum of all line items in the order
     */
     public void newOrder(int warehouse, int station, int customer, int[] items, int[] counts, int totalItems)
     {
