@@ -6,7 +6,7 @@ import java.util.Random;
 
 public class ThreadEx extends Thread
 {
-	private static int NUM_OF_THREADS = 15;
+	private static int NUM_OF_THREADS = 5;
 	
 	static int m_myId;
 	

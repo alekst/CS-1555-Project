@@ -1491,6 +1491,9 @@ public class DBLoader
     public void stockLevel(int warehouse, int station, int threshold)
     {
         // use the queue of the last 20 orders to retrieve the items from the database
+		
+		
+		
         ResultSet[] results = new ResultSet[last20Orders[warehouse - 1][station - 1].length];
         String getLineString = "select item_id from LineItems " +
             "where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
