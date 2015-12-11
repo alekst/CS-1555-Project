@@ -1512,7 +1512,7 @@ public class DBLoader
         int order_id, customer_id, item_id, in_stock;
 		int underStockCount = 0;
 		String getLast20OrdersString = "select * from " + 
-			"(select * from Orders by order_date desc) " + 
+			"(select * from Orders order by order_date desc) " + 
 				"where rownum < 21 and warehouse_id = ? and station_id = ?";
         String getLineString = "select item_id from LineItems " +
             "where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
@@ -1524,12 +1524,14 @@ public class DBLoader
 		try
 		{
 			save = con.setSavepoint();
-			con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+			con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 			Statement stmt = con.createStatement();
 			stmt.executeUpdate("SET TRANSACTION READ ONLY");
 			PreparedStatement getLast20Orders = con.prepareStatement(getLast20OrdersString);
+			System.out.println("before: " + getLast20OrdersString);
 			getLast20Orders.setInt(1, warehouse);
 			getLast20Orders.setInt(2, station);
+			System.out.println("after: " + getLast20OrdersString);
 			PreparedStatement getLine = con.prepareStatement(getLineString);
 			PreparedStatement getStock = con.prepareStatement(getStockString);
 			ResultSet orderResults = getLast20Orders.executeQuery();
