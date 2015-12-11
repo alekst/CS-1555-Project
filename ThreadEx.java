@@ -36,7 +36,9 @@ public class ThreadEx extends Thread
     // 	         System.out.println
     // 	                ("All threads will be sharing the same connection");
     // 	      }
-		  DBLoader db = new DBLoader();
+
+		  DBLoader db = new DBLoader(false);
+
 	      // get a shared connection
           OracleDataSource ods = new OracleDataSource();          
 		  ods.setURL(db.server);          
@@ -85,8 +87,22 @@ public class ThreadEx extends Thread
 	
 	public void run()
 	  {
-	    ResultSet resultSet   = null;
-	    Statement  statement = null;
+	    ResultSet resultSet = null;
+	    Statement statement = null;
+
+	    switch (m_myID)
+	    {
+	    	case 0:	createNewOrder();
+	    			break;
+	    	case 1:	makePayment();
+	    			break;
+	    	case 2:	orderStatus();
+	    			break;
+	    	case 3:	makeDelivery();
+	    			break;
+	    	case 4:	getStock();
+	    			break;
+	    }
 
 	    try
 	    {    
