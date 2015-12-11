@@ -217,10 +217,12 @@ public class DBLoader
 
             // initialize the database
 			initDatabase();
+			
+	    	// populate the tables with generated data
+	    	populateTables();
     	}
 
-    	// populate the tables with generated data
-    	populateTables();
+
 
 
 

@@ -1,4 +1,5 @@
 import java.sql.*;
+import java.math.*;
 import oracle.jdbc.OracleStatement;
 import oracle.jdbc.pool.*;
 import java.util.Random;
@@ -7,10 +8,12 @@ public class ThreadEx extends Thread
 {
 	private static int NUM_OF_THREADS = 15;
 	
-	int m_myId;
+	static int m_myId;
 	
 	static int c_nextId = 0;
 	static boolean share_connection = true;	
+	
+	static DBLoader db = null;
 	
 	synchronized static int getNextId()
 	{
@@ -21,31 +24,15 @@ public class ThreadEx extends Thread
 	  {
 	    try  
 	    {  
-  
-	      // If NoOfThreads is specified, then read it
-	      // if ((args.length > 2)  ||
-    // 	           ((args.length > 1) && !(args[1].equals("share"))))
-    // 	      {
-    // 	         System.out.println("Error: Invalid Syntax. ");
-    // 	         System.out.println("java JdbcMTSample [NoOfThreads] [share]");
-    // 	         System.exit(0);
-    // 	      }
-    //
-    // 	      if (args.length > 1)
-    // 	      {
-    // 	         share_connection = true;
-    // 	         System.out.println
-    // 	                ("All threads will be sharing the same connection");
-    // 	      }
 
-		  DBLoader db = new DBLoader(false);
+		  db = new DBLoader(false);
 
 	      // get a shared connection
-          OracleDataSource ods = new OracleDataSource();          
-		  ods.setURL(db.server);          
-		  ods.setUser(db.username);          
-		  ods.setPassword(db.password);          
-		  Connection s_conn = ods.getConnection();
+          // OracleDataSource ods = new OracleDataSource();
+ // 		  ods.setURL(db.server);
+ // 		  ods.setUser(db.username);
+ // 		  ods.setPassword(db.password);
+ // 		  Connection s_conn = ods.getConnection();
 		  
 	      // Create the threads
 	      Thread[] threadList = new Thread[NUM_OF_THREADS];
@@ -53,7 +40,7 @@ public class ThreadEx extends Thread
 	      // spawn threads
 	      for (int i = 0; i < NUM_OF_THREADS; i++)
 	      {
-	          threadList[i] = new ThreadEx();
+	          threadList[i] = new ThreadEx(db);
 	          threadList[i].start();
 	      }
     
@@ -65,12 +52,12 @@ public class ThreadEx extends Thread
 	      {
 	          threadList[i].join();
 	      }
-
-	      if (share_connection)
-	      {
-	          s_conn.close();
-	          s_conn = null;
-	      }
+		  System.out.println("It is done");
+	      // if (share_connection)
+// 	      {
+// 	          s_conn.close();
+// 	          s_conn = null;
+// 	      }
           
 	    }
 	    catch (Exception e)
@@ -79,9 +66,10 @@ public class ThreadEx extends Thread
 	    }
 	}
 	
-	public ThreadEx()
+	public ThreadEx(DBLoader db)
 	{
 		super();
+		this.db = db;
 		//Assign an ID to the thread
 		m_myId = getNextId();
 	}
@@ -90,18 +78,25 @@ public class ThreadEx extends Thread
 	  {
 	    ResultSet resultSet = null;
 	    Statement statement = null;
+		
+		int newId = m_myId % 5;
 
-	    switch (m_myID % 5)
+	    switch (newId)
 	    {
-	    	case 0:	createNewOrder();
+	    	case 0:	System.out.println("Creating order");
+					createNewOrder();
 	    			break;
-	    	case 1:	makePayment();
+	    	case 1:	System.out.println("Making payment");
+					makePayment();
 	    			break;
-	    	case 2:	orderStatus();
+	    	case 2:	System.out.println("Order status");
+					orderStatus();
 	    			break;
-	    	case 3:	makeDelivery();
+	    	case 3:	System.out.println("Make delivery");
+					makeDelivery();
 	    			break;
-	    	case 4:	getStock();
+	    	case 4:	System.out.println("Get stock");
+					getStock();
 	    			break;
 	    }
 
@@ -124,7 +119,7 @@ public class ThreadEx extends Thread
 			counts[ind] = rand.nextInt(10) + 1;
 			totalItems += counts[ind];
 		}
-		newOrder(warehouse, randomStation, randomCustomer, items, counts, totalItems);	
+		db.newOrder(warehouse, randomStation, randomCustomer, items, counts, totalItems);	
 	}
 
 
@@ -133,7 +128,7 @@ public class ThreadEx extends Thread
   		Random rand = new Random(System.nanoTime());
   		int warehouse = 1;
   		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE) + 1;
-  		int customer = rand.nextInt(db.CUSTOMES_PER_STATION) + 1;
+  		int customer = rand.nextInt(db.CUSTOMERS_PER_STATION) + 1;
   		BigDecimal payment = new BigDecimal(rand.nextInt(50) + rand.nextFloat());
 
   		db.processPayment(warehouse, station, customer, payment);
@@ -144,7 +139,7 @@ public class ThreadEx extends Thread
   		Random rand = new Random(System.nanoTime());
   		int warehouse = 1;
   		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE) + 1;
-  		int customer = rand.nextInt(db.CUSTOMES_PER_STATION) + 1;
+  		int customer = rand.nextInt(db.CUSTOMERS_PER_STATION) + 1;
 
   		db.getOrderStatus(warehouse, station, customer);
   	}
