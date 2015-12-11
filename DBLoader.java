@@ -36,8 +36,8 @@ public class DBLoader
 	private Connection con;
 	private ResultSet resultSet, rs;
     private String server;
-	private String username;
-	private String password;
+	public String username;
+	public String password;
     private Scanner scan;
     private String startTransaction = "SET TRANSACTION READ WRITE";
     private final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
