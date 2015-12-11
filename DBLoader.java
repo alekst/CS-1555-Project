@@ -1512,8 +1512,8 @@ public class DBLoader
         int order_id, customer_id, item_id, in_stock;
 		int underStockCount = 0;
 		String getLast20OrdersString = "select * from " + 
-			"(select * from order by order_date desc) " + 
-				"where rownum < 21 and warehouse_id = ? and station_id = ?";
+			"(select * from orders order by order_date desc) " + 
+			"where rownum < 21 and warehouse_id = ? and station_id = ?";
 		
         String getLineString = "select item_id from LineItems " +
             "where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
