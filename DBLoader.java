@@ -1509,68 +1509,115 @@ public class DBLoader
     */
     public void stockLevel(int warehouse, int station, int threshold)
     {
-        // use the queue of the last 20 orders to retrieve the items from the database
+        int order_id, customer_id, item_id, in_stock;
+		int underStockCount = 0;
+		String getLast20OrdersString = "select * from " + 
+			"(select * from order by order_date desc) " + 
+				"where rownum < 21 and warehouse_id = ? and station_id = ?";
 		
-		
-		
-        ResultSet[] results = new ResultSet[last20Orders[warehouse - 1][station - 1].length];
         String getLineString = "select item_id from LineItems " +
             "where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
         String getStockString = "select in_stock from StockItems " +
             "where item_id = ? and warehouse_id = ?";
-
-        Savepoint save = null;
-        try
-        {
-            save = con.setSavepoint();
-            con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-            Statement stmt = con.createStatement();
-            stmt.executeUpdate("SET TRANSACTION READ ONLY");
-            PreparedStatement getLine = con.prepareStatement(getLineString);
-
-            for (int i = 0; i < last20Orders[warehouse - 1][station - 1].length; i++)
-            {
-                // parse the order string
-                String[] splitString = last20Orders[warehouse - 1][station - 1][i].split("-");
-
-                // set up the statement
-                getLine.setString(1, splitString[3]);
-                getLine.setString(2, splitString[2]);
-                getLine.setInt(3, station);
-                getLine.setInt(4, warehouse);
-                results[i] = getLine.executeQuery();
-            }
-
-            // walk through the result sets, querying the database for the stock of each line item in the warehouse
-            int underStockCount = 0;
-            PreparedStatement getStock = null;
-            ResultSet stockResults = null;
-            getStock = con.prepareStatement(getStockString);
-            for (int i = 0; i < results.length; i++)
-            {
-                while (results[i].next())
-                {
-                    // set up and execute the stock query
-                    getStock.setInt(1, results[i].getInt("item_id"));
-                    getStock.setInt(2, warehouse);
-                    stockResults = getStock.executeQuery();
-
-                    // compare the stock number to the threshold, and increment the total if necessary
-                    stockResults.next();
-                    if (stockResults.getInt("in_stock") < threshold)
-                        underStockCount++;
-
-                    stockResults.close();
-                }
-            }
+		
+		try
+		{
+			save = con.setSavepoint();
+			con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+			Statement stmt = con.createStatement();
+			stmt.executeUpdate("SET TRANSACTION READ ONLY");
+			PreparedStatement getLast20Orders = con.prepareStatement(getLast20OrdersString);
+			getLast20Orders.setInt(1, warehouse);
+			getLast20Orders.setInt(2, station);
+			PreparedStatement getLine = con.prepareStatement(getLineString);
+			PreparedStatement getStock = con.prepareStatement(getStockString);
+			ResultSet orderResults = getLast20Orders.executeQuery();
+			while (orderResults.next())
+			{
+				order_id = orderResults.getInt(1);
+				customer_id = orderResults.getInt(2);
+				getLine.setInt(1, order_id);
+				getLine.setInt(2, customer_id);
+				getLine.setInt(3, station);
+				getLine.setInt(4, warehouse);
+				ResultSet itemResults = getLine.executeQuery();
+				while (itemResults.next())
+				{
+					item_id = itemResults.getInt(1);
+					getStock.setInt(1, item_id);
+					getStock.setInt(2, warehouse);
+					ResultSet stockResults = getStock.executeQuery();
+					while (stockResults.next())
+					{
+						in_stock = stockResults.getInt(1); //
+						if (in_stock < threshold)
+							underStockCount++;
+					}
+					stockResults.close();
+				}
+				itemResults.close();
+			}
+			orderResults.close();
+		
+		
+        // ResultSet[] results = new ResultSet[last20Orders[warehouse - 1][station - 1].length];
+ //        String getLineString = "select item_id from LineItems " +
+ //            "where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
+ //        String getStockString = "select in_stock from StockItems " +
+ //            "where item_id = ? and warehouse_id = ?";
+ //
+ //        Savepoint save = null;
+ //        try
+ //        {
+ //            save = con.setSavepoint();
+ //            con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+ //            Statement stmt = con.createStatement();
+ //            stmt.executeUpdate("SET TRANSACTION READ ONLY");
+ //            PreparedStatement getLine = con.prepareStatement(getLineString);
+ //
+ //            for (int i = 0; i < last20Orders[warehouse - 1][station - 1].length; i++)
+ //            {
+ //                // parse the order string
+ //                String[] splitString = last20Orders[warehouse - 1][station - 1][i].split("-");
+ //
+ //                // set up the statement
+ //                getLine.setString(1, splitString[3]);
+ //                getLine.setString(2, splitString[2]);
+ //                getLine.setInt(3, station);
+ //                getLine.setInt(4, warehouse);
+ //                results[i] = getLine.executeQuery();
+ //            }
+ //
+ //            // walk through the result sets, querying the database for the stock of each line item in the warehouse
+ //
+ //            PreparedStatement getStock = null;
+ //            ResultSet stockResults = null;
+ //            getStock = con.prepareStatement(getStockString);
+ //            for (int i = 0; i < results.length; i++)
+ //            {
+ //                while (results[i].next())
+ //                {
+ //                    // set up and execute the stock query
+ //                    getStock.setInt(1, results[i].getInt("item_id"));
+ //                    getStock.setInt(2, warehouse);
+ //                    stockResults = getStock.executeQuery();
+ //
+ //                    // compare the stock number to the threshold, and increment the total if necessary
+ //                    stockResults.next();
+ //                    if (stockResults.getInt("in_stock") < threshold)
+ //                        underStockCount++;
+ //
+ //                    stockResults.close();
+            //     }
+            // }
 
             // close the result sets
-            getStock.close();
-            getLine.close();
-            for (int i = 0; i < results.length; i++)
-            {
-                results[i].close();
-            }
+            // getStock.close();
+            // getLine.close();
+            // for (int i = 0; i < results.length; i++)
+            // {
+            //     results[i].close();
+            // }
 
             System.out.println("\nStock items from the last 20 orders of station " + station + " in warehouse " + warehouse);
             System.out.println("which are below the threshold of " + threshold + ": " + underStockCount);
