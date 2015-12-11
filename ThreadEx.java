@@ -126,6 +126,43 @@ public class ThreadEx extends Thread
 		}
 		newOrder(warehouse, randomStation, randomCustomer, items, counts, totalItems);	
 	}
+
+
+  	private void makePayment()
+  	{
+  		Random rand = new Random(System.nanoTime());
+  		int warehouse = 1;
+  		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE) + 1;
+  		int customer = rand.nextInt(db.CUSTOMES_PER_STATION) + 1;
+  		BigDecimal payment = new BigDecimal(rand.nextInt(50) + rand.nextFloat());
+
+  		db.processPayment(warehouse, station, customer, payment);
+  	}
+
+  	private void orderStatus()
+  	{
+  		Random rand = new Random(System.nanoTime());
+  		int warehouse = 1;
+  		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE) + 1;
+  		int customer = rand.nextInt(db.CUSTOMES_PER_STATION) + 1;
+
+  		db.getOrderStatus(warehouse, station, customer);
+  	}
+
+  	private void makeDelivery()
+  	{
+  		db.getDeliveryTransaction(1);
+  	}
+
+  	private void getStock()
+  	{
+  		Random rand = new Random(System.nanoTime());
+  		int warehouse = 1;
+  		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE);
+  		int threshold = rand.nextInt(30);
+
+  		db.stockLevel(warehouse, station, threshold);
+	}
 	
 	
 	static boolean greenLight = false;
