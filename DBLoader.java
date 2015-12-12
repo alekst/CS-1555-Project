@@ -957,7 +957,7 @@ public class DBLoader
 
             // set up the transaction
             save = con.setSavepoint();
-            //statement = con.createStatement();
+            statement = con.createStatement();
             con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             //statement.executeUpdate("SET TRANSACTION READ WRITE");
 
@@ -970,7 +970,7 @@ public class DBLoader
             statement.executeUpdate("COMMIT");
             addOrder.close();
             addLineItem.close();
-            //statement.close();
+            statement.close();
 
             enqueueOrder(warehouse, station, customer, thisOrderID);
 
@@ -981,7 +981,7 @@ public class DBLoader
 
             System.out.println("Order number " + thisOrderID + " successfully placed for:");
             System.out.println("customer " + customer + " of station " + station + ", warehouse " + warehouse);
-			con.commit();
+			//con.commit();
             System.out.println("\n---------------------------------------------");
             System.out.println("New Order transaction committed successfully.");
             System.out.println("---------------------------------------------\n");
