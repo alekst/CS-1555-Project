@@ -45,6 +45,7 @@ public class ThreadEx extends Thread
 	      }
     
 	      // Start everyone at the same time
+	      long start = System.nanoTime();
 	      setGreenLight ();
 
 	      // wait for all threads to end
@@ -52,7 +53,11 @@ public class ThreadEx extends Thread
 	      {
 	          threadList[i].join();
 	      }
-		  System.out.println("The threadding is complete.");
+	      long end = System.nanoTime();
+	      double elapsed = (double)(end - start) / (double)1000000000;
+
+		  System.out.println("The threading is complete.");
+		  System.out.println("Time elapsed for threading: " + elapsed + " sec\n");
 	      // if (share_connection)
 // 	      {
 // 	          s_conn.close();
@@ -69,7 +74,7 @@ public class ThreadEx extends Thread
 	public ThreadEx(DBLoader db)
 	{
 		super();
-		this.db = db;
+		this.db = new DBLoader(db);
 		//Assign an ID to the thread
 		m_myId = getNextId();
 	}
@@ -155,7 +160,7 @@ public class ThreadEx extends Thread
   		Random rand = new Random(System.nanoTime());
   		int warehouse = 1;
   		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE) + 1;
-  		int threshold = rand.nextInt(30) + 1;
+  		int threshold = rand.nextInt(500) + 1;
 
   		db.stockLevel(warehouse, station, threshold);
 	}

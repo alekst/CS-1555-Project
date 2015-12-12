@@ -81,6 +81,19 @@ public class DBLoader
     {
         new DBLoader(true);
     }
+
+    /**
+    * Copy constructor
+    */
+    public DBLoader(DBLoader loader)
+    {
+        this.con = loader.getConnection();
+        this.itemCost = loader.getItemCost();
+        this.currOrderID = loader.getCurrOrderID();
+        this.currLineID = loader.getCurrLineID();
+        this.last20Orders = loader.getLast20Orders();
+        this.last20Index = loader.getLast20Index();
+    }
 	
 
     /**
@@ -99,30 +112,34 @@ public class DBLoader
         System.out.println("\nWelcome to the database loader!");
 		System.out.println("Today is " + getTodaysDate());
         System.out.println("\nThe default database is : " + SERVER_ADDR);
-        System.out.print("If you wish to use a different database, enter the address now,\nor press enter to use the default: ");
-        String answer = scan.nextLine();
-
-        if (!answer.equals(""))
+        String answer = null;
+        boolean done = false;
+        do
         {
-            do
+            System.out.print("If you wish to use a different database, enter the address now,\nor press enter to use the default: ");
+            answer = scan.nextLine();
+
+            if (!answer.equals(""))
             {
                 System.out.println("You entered: " + answer);
                 System.out.print("Is this correct? (y/n): ");
                 answer = scan.nextLine();
-                server = answer;
 
-                if (answer.equals(""))
+                if (answer.toUpperCase().equals("Y"))
                 {
-                    System.out.println("Using default database.");
-                    server = SERVER_ADDR;
-                }
+                    System.out.println("Using " + answer + " as the database server.");
+                    server = answer;
+                    done = true;
+                }        
             }
-            while (!answer.equals(""));
+            else
+            {
+                System.out.println("Using default database.");
+                server = SERVER_ADDR;
+                done = true;
+            }
         }
-        else
-        {
-            server = SERVER_ADDR;
-        }
+        while (!done);
 
         // prompt the user for their credentials
         System.out.print("Please enter your username: ");
@@ -145,82 +162,75 @@ public class DBLoader
             System.out.println("Error setting up connection.");
         }
 
-        // ask whether the user wants to drop the tables or not
-        System.out.print("\nDo you want to create or recreate the tables in the database? (y/n): ");
-        answer = scan.nextLine();
-
         ///////////////////////////////////
         // Load the data into the database
         ///////////////////////////////////
 
       	// drop and recreate the tables
-    	if (answer.toUpperCase().equals("Y"))
-    	{
-            // ask for the number of warehouses, stations, customers, and items they want to create
-            boolean gotIt = false;
-            int oldWarehouses = WAREHOUSES;
-            int oldStations = STATIONS_PER_WAREHOUSE;
-            int oldCustomers = CUSTOMERS_PER_STATION;
-            int oldItems = ITEMS;
-            String readIn;
+        // ask for the number of warehouses, stations, customers, and items they want to create
+        boolean gotIt = false;
+        int oldWarehouses = WAREHOUSES;
+        int oldStations = STATIONS_PER_WAREHOUSE;
+        int oldCustomers = CUSTOMERS_PER_STATION;
+        int oldItems = ITEMS;
+        String readIn;
 
-            // ask for user input if askForParameters is true
-            if (askForParameters)
+        // ask for user input if askForParameters is true
+        if (askForParameters)
+        {
+            do
             {
-                do
+                WAREHOUSES = oldWarehouses;
+                STATIONS_PER_WAREHOUSE = oldStations;
+                CUSTOMERS_PER_STATION = oldCustomers;
+                ITEMS = oldItems;
+                try
                 {
-                    WAREHOUSES = oldWarehouses;
-                    STATIONS_PER_WAREHOUSE = oldStations;
-                    CUSTOMERS_PER_STATION = oldCustomers;
-                    ITEMS = oldItems;
-                    try
-                    {
-                        System.out.print("Number of warehouses? (Enter for default of " + WAREHOUSES + "): ");
-                        readIn = scan.nextLine();
-                        if (!readIn.equals(""))
-                            WAREHOUSES = Integer.parseInt(readIn);
-                        System.out.print("Number of stations per warehouse? (Enter for default of "+ STATIONS_PER_WAREHOUSE + "): ");
-                        readIn = scan.nextLine();
-                        if (!readIn.equals(""))
-                            STATIONS_PER_WAREHOUSE = Integer.parseInt(readIn);
-                        System.out.print("Number of customers per station? (Enter for default of " + CUSTOMERS_PER_STATION + "): ");
-                        readIn = scan.nextLine();
-                        if (!readIn.equals(""))
-                            CUSTOMERS_PER_STATION = Integer.parseInt(readIn);
-                        System.out.print("Number of unique items? (Enter for default of " + ITEMS + "): ");
-                        readIn = scan.nextLine();
-                        if (!readIn.equals(""))
-                            ITEMS = Integer.parseInt(readIn);
+                    System.out.print("Number of warehouses? (Enter for default of " + WAREHOUSES + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        WAREHOUSES = Integer.parseInt(readIn);
+                    System.out.print("Number of stations per warehouse? (Enter for default of "+ STATIONS_PER_WAREHOUSE + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        STATIONS_PER_WAREHOUSE = Integer.parseInt(readIn);
+                    System.out.print("Number of customers per station? (Enter for default of " + CUSTOMERS_PER_STATION + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        CUSTOMERS_PER_STATION = Integer.parseInt(readIn);
+                    System.out.print("Number of unique items? (Enter for default of " + ITEMS + "): ");
+                    readIn = scan.nextLine();
+                    if (!readIn.equals(""))
+                        ITEMS = Integer.parseInt(readIn);
 
-                        gotIt = true;
-                    }
-                    catch (NumberFormatException e)
-                    {
-                        System.out.println("Invalid number format, whole integers only please.");
-                    }
+                    gotIt = true;
                 }
-                while (!gotIt);
+                catch (NumberFormatException e)
+                {
+                    System.out.println("Invalid number format, whole integers only please.");
+                }
             }
-            else
-            {
-                System.out.println("Using default values to populate database.");
-            }
+            while (!gotIt);
+        }
+        else
+        {
+            System.out.println("Using default values to populate database.");
+        }
 
-            last20Orders = new String[WAREHOUSES][STATIONS_PER_WAREHOUSE][20];
-            last20Index = new int[WAREHOUSES][STATIONS_PER_WAREHOUSE];
+        last20Orders = new String[WAREHOUSES][STATIONS_PER_WAREHOUSE][20];
+        last20Index = new int[WAREHOUSES][STATIONS_PER_WAREHOUSE];
 
-            for (int i = 0; i < last20Index.length; i++)
-            {
-                for (int j = 0; j < last20Index[i].length; j++)
-                    last20Index[i][j] = 0;
-            }
+        for (int i = 0; i < last20Index.length; i++)
+        {
+            for (int j = 0; j < last20Index[i].length; j++)
+                last20Index[i][j] = 0;
+        }
 
-            // initialize the database
-			initDatabase();
-			
-	    	// populate the tables with generated data
-	    	populateTables();
-    	}
+        // initialize the database
+		initDatabase();
+		
+    	// populate the tables with generated data
+    	populateTables();
 
 
 
@@ -962,7 +972,7 @@ public class DBLoader
             //statement.executeUpdate("SET TRANSACTION READ WRITE");
 
             // execute the statements
-            updateStock.execute();
+            updateStock.executeBatch();
             addOrder.execute();
             addLineItem.executeBatch();
 
@@ -994,7 +1004,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-			System.out.println("Error is " + e.toString());
+			System.out.println("Error in new order is " + e.toString());
             System.out.println("\n-----------------------------------------------");
             System.out.println("Error inserting order, transaction rolled back.");
             System.out.println("-----------------------------------------------\n");
@@ -1102,7 +1112,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-			System.out.println("Error is " + e.toString());
+			System.out.println("Error in proccess payment is " + e.toString());
             System.out.println("\n--------------------------------------------------");
 			System.out.println("Error processing payment, transaction rolled back.");
             System.out.println("--------------------------------------------------\n");
@@ -1178,7 +1188,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-				System.out.println("Error: " + e.toString());
+				System.out.println("Error in order status is: " + e.toString());
             System.out.println("\n--------------------------------------------------------");
 			System.out.println("Error getting the order status. Transaction rolled back.");
             System.out.println("--------------------------------------------------------\n");
@@ -1306,7 +1316,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-			System.out.println("error " + e.toString());	
+			System.out.println("Error in delivery is: " + e.toString());	
 			System.out.println("\n---------------------------------------------------------------");
             System.out.println("Error processing delivery transaction, transaction rolled back.");
             System.out.println("---------------------------------------------------------------\n");
@@ -1599,9 +1609,9 @@ public class DBLoader
             catch (SQLException f)
             {}
 
+            System.out.println("Error in stock level is: " + e.toString());
             System.out.println("\n---------------------------------------------------------------");
             System.out.println("Error processing stock level transaction, transaction rolled back.");
-            System.out.println(e.toString());
             System.out.println("---------------------------------------------------------------\n");
         }
     }
@@ -1954,6 +1964,39 @@ public class DBLoader
     private String getOrderKey(int warehouse, int station, int customer, int order)
     {
         return warehouse + "-" + station + "-" + customer + "-" + order;
+    }
+
+    /************************
+    * Various getters
+    *************************/
+    public Connection getConnection()
+    {
+        return con;
+    }
+
+    public HashMap<Integer, Float> getItemCost()
+    {
+        return itemCost;
+    }
+
+    public HashMap<String, Integer> getCurrOrderID()
+    {
+        return currOrderID;
+    }
+
+    public HashMap<String, Integer> getCurrLineID()
+    {
+        return currLineID;
+    }
+
+    public String[][][] getLast20Orders()
+    {
+        return last20Orders;
+    }
+
+    public int[][] getLast20Index()
+    {
+        return last20Index;
     }
 
 }
