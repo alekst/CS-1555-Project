@@ -1140,9 +1140,9 @@ public class DBLoader
 		{
             // set transaction and execute
             save = con.setSavepoint();
-            con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-            Statement stmt = con.createStatement();
-            stmt.executeUpdate("SET TRANSACTION READ ONLY");
+            con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            // Statement stmt = con.createStatement();
+ //            stmt.executeUpdate("SET TRANSACTION READ ONLY");
 			//System.out.println("Getting order status for " + customer_id + " from the station " + station_id + "of the warehouse " + warehouse_id); //mostly for debugging purposes	
 			ResultSet rs1 = getMostRecentOrders(warehouse_id, station_id, customer_id);
             con.commit();
@@ -1239,13 +1239,14 @@ public class DBLoader
             save = con.setSavepoint();
             con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             Statement stmt = con.createStatement();
-            stmt.executeUpdate("SET TRANSACTION READ WRITE");
+            //stmt.executeUpdate("SET TRANSACTION READ WRITE");
 
 			String theDeliveredString = "select * from Orders where completed = ? and warehouse_id = ?";
 			PreparedStatement theDelivered = con.prepareStatement(theDeliveredString);
 			theDelivered.setInt(1, 0);
 			theDelivered.setInt(2, warehouse_id);
 			resultSet = theDelivered.executeQuery();
+			//con.commit();
 			if (!resultSet.isBeforeFirst() ) {    
 			 System.out.println("All line items in this warehouses have been delivered. No new deliveries will be made."); 
 			} 
@@ -1295,7 +1296,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-
+			System.out.println("error " + e.toString());	
 			System.out.println("\n---------------------------------------------------------------");
             System.out.println("Error processing delivery transaction, transaction rolled back.");
             System.out.println("---------------------------------------------------------------\n");
@@ -1318,6 +1319,10 @@ public class DBLoader
 	*/
 	private void addDeliveryDate(int order_id, int customer_id, int station_id, int warehouse_id) throws SQLException
 	{
+		// Savepoint save = null;
+//         save = con.setSavepoint();
+//         con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+		
 		Date date = getTodaysDate();
 		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 		String dateString = df.format(date);
@@ -1331,6 +1336,8 @@ public class DBLoader
 		addDelivery.setInt(4, station_id);
 		addDelivery.setInt(5, warehouse_id);
 		addDelivery.executeUpdate();
+		
+		//con.commit();
 	}
 
     /*
@@ -1376,7 +1383,10 @@ public class DBLoader
 	private void setCompleted(int order_id, int customer_id, int station_id, int warehouse_id) throws SQLException
 	{
 		//System.out.println("Updating the order of id " + order_id + " to complete.");
-
+        // Savepoint save = null;
+// 		save = con.setSavepoint();
+//         con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+		
 		String setCompletedString = "update Orders set completed=1 where order_id = ? and customer_id = ? and station_id = ? and warehouse_id = ?";
 		PreparedStatement setCompleted = con.prepareStatement(setCompletedString);
 		setCompleted.setInt(1, order_id);
@@ -1384,6 +1394,7 @@ public class DBLoader
 		setCompleted.setInt(3, station_id);
 		setCompleted.setInt(4, warehouse_id);
 		setCompleted.executeUpdate();
+		//con.commit();
 	}
 	
 	/* 
@@ -1524,14 +1535,12 @@ public class DBLoader
 		try
 		{
 			save = con.setSavepoint();
-			con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-			Statement stmt = con.createStatement();
-			stmt.executeUpdate("SET TRANSACTION READ ONLY");
+			con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+			// Statement stmt = con.createStatement();
+// 			stmt.executeUpdate("SET TRANSACTION READ ONLY");
 			PreparedStatement getLast20Orders = con.prepareStatement(getLast20OrdersString);
-			System.out.println("before: " + getLast20OrdersString);
 			getLast20Orders.setInt(1, warehouse);
 			getLast20Orders.setInt(2, station);
-			System.out.println("after: " + getLast20OrdersString);
 			PreparedStatement getLine = con.prepareStatement(getLineString);
 			PreparedStatement getStock = con.prepareStatement(getStockString);
 			ResultSet orderResults = getLast20Orders.executeQuery();
@@ -1577,6 +1586,7 @@ public class DBLoader
         {
             try
             {
+				System.err.println("The transaction is being rolled back" + e.toString());
                 con.rollback(save);
             }
             catch (SQLException f)

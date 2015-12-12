@@ -6,7 +6,7 @@ import java.util.Random;
 
 public class ThreadEx extends Thread
 {
-	private static int NUM_OF_THREADS = 5;
+	private static int NUM_OF_THREADS = 15;
 	
 	static int m_myId;
 	
@@ -52,7 +52,7 @@ public class ThreadEx extends Thread
 	      {
 	          threadList[i].join();
 	      }
-		  System.out.println("It is done");
+		  System.out.println("The threadding is complete.");
 	      // if (share_connection)
 // 	      {
 // 	          s_conn.close();
@@ -83,19 +83,19 @@ public class ThreadEx extends Thread
 
 	    switch (newId)
 	    {
-	    	case 0:	System.out.println("Creating order");
+	    	case 0:	//System.out.println("Creating order");
 					createNewOrder();
 	    			break;
-	    	case 1:	System.out.println("Making payment");
+	    	case 1:	//System.out.println("Making payment");
 					makePayment();
 	    			break;
-	    	case 2:	System.out.println("Order status");
+	    	case 2:	//System.out.println("Order status");
 					orderStatus();
 	    			break;
-	    	case 3:	System.out.println("Make delivery");
+	    	case 3:	//System.out.println("Make delivery");
 					makeDelivery();
 	    			break;
-	    	case 4:	System.out.println("Get stock");
+	    	case 4:	//System.out.println("Get stock");
 					getStock();
 	    			break;
 	    }
@@ -153,8 +153,8 @@ public class ThreadEx extends Thread
   	{
   		Random rand = new Random(System.nanoTime());
   		int warehouse = 1;
-  		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE);
-  		int threshold = rand.nextInt(30);
+  		int station = rand.nextInt(db.STATIONS_PER_WAREHOUSE) + 1;
+  		int threshold = rand.nextInt(30) + 1;
 
   		db.stockLevel(warehouse, station, threshold);
 	}
