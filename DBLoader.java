@@ -932,8 +932,10 @@ public class DBLoader
             // iterate through items array and prepare the lineItem batch
             int thisLineID = 1;
             PreparedStatement updateStock = null;
+			//System.out.println("items is this long " + items.length);
             for (int i = 0; i < items.length; i++)
             {
+				//System.out.println("items " + i + "is " + items[i]);
                 float lineTotal = itemCost.get(items[i]).floatValue() * counts[i];
 
                 addLineItem.setInt(1, thisLineID);
@@ -1160,8 +1162,9 @@ public class DBLoader
 				String order_date = rs1.getString(5);
 				getOrderDetails(order_id, customer_id, station_id, warehouse_id, order_date);
 			}
-			rs1.close();
+			
 			con.commit();
+			rs1.close();
             System.out.println("\n---------------------------------------------");
             System.out.println("Order status transaction committed successfully.");
             System.out.println("---------------------------------------------\n");

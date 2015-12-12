@@ -109,11 +109,12 @@ public class ThreadEx extends Thread
 		int randomStation = rand.nextInt(db.STATIONS_PER_WAREHOUSE) + 1;
 		int randomCustomer = rand.nextInt(db.CUSTOMERS_PER_STATION) + 1;
 		int randomItemsLength = rand.nextInt(db.MAX_LINE_ITEMS_PER_ORDER) + 3; //from 3 to 10
+		System.out.println("Random Items Length is " + randomItemsLength);
 		int[] items = new int[randomItemsLength]; //creates items array
 		int[] counts = new int[randomItemsLength];
 		int totalItems = 0;
 		
-		for (int ind = 0; ind < randomItemsLength - 1; ++ind)
+		for (int ind = 0; ind < randomItemsLength; ++ind)
 		{
 			items[ind] = rand.nextInt(db.ITEMS) + 1;
 			counts[ind] = rand.nextInt(10) + 1;
