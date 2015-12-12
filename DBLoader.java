@@ -994,7 +994,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-
+			System.out.println("Error is " + e.toString());
             System.out.println("\n-----------------------------------------------");
             System.out.println("Error inserting order, transaction rolled back.");
             System.out.println("-----------------------------------------------\n");
