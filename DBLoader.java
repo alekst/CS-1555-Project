@@ -957,7 +957,7 @@ public class DBLoader
             save = con.setSavepoint();
             statement = con.createStatement();
             con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-            statement.executeUpdate("SET TRANSACTION READ WRITE");
+            //statement.executeUpdate("SET TRANSACTION READ WRITE");
 
             // execute the statements
             updateStock.execute();
@@ -1053,34 +1053,41 @@ public class DBLoader
 		{
             System.out.println("Starting to process payment transaction for customer " + customer_id + " of station " + station_id);
             System.out.println("Here is the pre-payment account status:");
-            showAccountStatus(warehouse_id, station_id, customer_id);
 
             PreparedStatement updateBalance = decrementBalance(warehouse_id, customer_id, station_id, payment);
+			
             PreparedStatement updatePaidAmount = updatePaidAmount(warehouse_id, customer_id, station_id, payment);
+			
             PreparedStatement updateTotalPayments = updateTotalPayments(warehouse_id, customer_id, station_id);
-            PreparedStatement updateYTDSales = updateYTDSales(warehouse_id, station_id, payment);
+			
+            PreparedStatement updateYTDSalesWare = updateYTDSalesWare(warehouse_id, payment);
+			
+			PreparedStatement updateYTDSalesStation = updateYTDSalesStation(warehouse_id, station_id, payment);
 
     		
             // set the transaction
             save = con.setSavepoint();
             con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-            Statement startTransaction = con.createStatement();
-            startTransaction.executeUpdate("set transaction read write");
+            //Statement startTransaction = con.createStatement();
+            //startTransaction.executeUpdate("set transaction read write");
 
             // execute the statements
+			showAccountStatus(warehouse_id, station_id, customer_id);
             updateBalance.executeBatch();
+			//System.out.println("We...");
             updatePaidAmount.executeBatch();
+			//System.out.println("Are...");
             updateTotalPayments.executeBatch();
-            updateYTDSales.executeBatch();
-
-            // commit the transaction
-            String commitString = "commit";
-            PreparedStatement commit = con.prepareStatement(commitString);
-            commit.execute();
+			//System.out.println("Here...");
+            updateYTDSalesWare.executeBatch();
+			updateYTDSalesStation.executeBatch();
+            
 
             System.out.println("Here is the post-payment account status:");
             showAccountStatus(warehouse_id, station_id, customer_id);
-
+            // commit the transaction
+            con.commit();
+			
             System.out.println("\n---------------------------------------------------");
             System.out.println("Process payment transaction committed successfully.");
             System.out.println("---------------------------------------------------\n");
@@ -1093,7 +1100,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-
+			System.out.println("Error is " + e.toString());
             System.out.println("\n--------------------------------------------------");
 			System.out.println("Error processing payment, transaction rolled back.");
             System.out.println("--------------------------------------------------\n");
@@ -1145,7 +1152,7 @@ public class DBLoader
  //            stmt.executeUpdate("SET TRANSACTION READ ONLY");
 			//System.out.println("Getting order status for " + customer_id + " from the station " + station_id + "of the warehouse " + warehouse_id); //mostly for debugging purposes	
 			ResultSet rs1 = getMostRecentOrders(warehouse_id, station_id, customer_id);
-            con.commit();
+            
             
 			while (rs1.next())
 			{
@@ -1154,7 +1161,7 @@ public class DBLoader
 				getOrderDetails(order_id, customer_id, station_id, warehouse_id, order_date);
 			}
 			rs1.close();
-
+			con.commit();
             System.out.println("\n---------------------------------------------");
             System.out.println("Order status transaction committed successfully.");
             System.out.println("---------------------------------------------\n");
@@ -1168,7 +1175,7 @@ public class DBLoader
             }
             catch (SQLException f)
             {}
-
+				System.out.println("Error: " + e.toString());
             System.out.println("\n--------------------------------------------------------");
 			System.out.println("Error getting the order status. Transaction rolled back.");
             System.out.println("--------------------------------------------------------\n");
@@ -1415,6 +1422,7 @@ public class DBLoader
 	private void incrementBalance(int warehouse_id, int customer_id, int station_id, BigDecimal charge) throws SQLException
 	{
 		String incrementBalanceString = "update Customers set balance = balance + ? where warehouse_id = ? and customer_id = ? and station_id = ?";
+		//System.out.println(incrementBalanceString);
 		PreparedStatement incrementBalance = con.prepareStatement(incrementBalanceString);
 		incrementBalance.setBigDecimal(1, charge);
 		incrementBalance.setInt(2, warehouse_id);
@@ -1472,29 +1480,24 @@ public class DBLoader
 	* A helper method. Updates the year to date sales in a warehouse and in a station
 	*/
 
-	private PreparedStatement updateYTDSales(int warehouse_id, int station_id, BigDecimal amount) throws SQLException
+	private PreparedStatement updateYTDSalesWare(int warehouse_id, BigDecimal amount) throws SQLException
 	{
-		HashMap<String, String> data = new HashMap<String, String>();
-		data.put("Warehouses", "warehouse_id");
-		data.put("Stations", "station_id");
+		String updateYTDSalesWString = "update Warehouses set sum_sales = sum_sales + ? where warehouse_id = ?";
+		PreparedStatement updateYTDSalesW = con.prepareStatement(updateYTDSalesWString);
+        updateYTDSalesW.setBigDecimal(1, amount);
+        updateYTDSalesW.setInt(2, warehouse_id);
+        
 
-		Iterator<String> keySetIterator = data.keySet().iterator();
-        String updateYTDSalesString = "update ? set sum_sales = sum_sales + ? where ? = ?";
-        PreparedStatement updateYTDSales = con.prepareStatement(updateYTDSalesString);
-		while(keySetIterator.hasNext())
-			{
-				String key = keySetIterator.next();
-                updateYTDSales.setString(1, key);
-                updateYTDSales.setString(2, data.get(key));
-				updateYTDSales.setBigDecimal(3, amount);
-				if (data.get(key).compareTo("warehouse_id") == 0)
-					updateYTDSales.setInt(4, warehouse_id);
-				else if (data.get(key).compareTo("station_id") == 0)
-					updateYTDSales.setInt(4, station_id);
-				updateYTDSales.addBatch();
-			}
-
-        return updateYTDSales;
+        return updateYTDSalesW;
+	}
+	
+	private PreparedStatement updateYTDSalesStation(int warehouse_id, int station_id, BigDecimal amount) throws SQLException
+	{
+		String updateYTDSalesSString = "update Stations set sum_sales = sum_sales + ? where station_id = ?";
+		PreparedStatement updateYTDSalesS = con.prepareStatement(updateYTDSalesSString);
+        updateYTDSalesS.setBigDecimal(1, amount);
+        updateYTDSalesS.setInt(2, station_id);
+		return updateYTDSalesS;
 	}
 	
 	/**
