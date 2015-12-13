@@ -13,11 +13,11 @@ randomly generated data. The preference's default setting is established in the 
 
 	* 1 warehouse
 	* 8 distribution stations per warehouse
-	* 3,000 customers per distribution station
-	* 10,000 items
-	* 10,000 stock listings per warehouse
-	* 100 max orders
-	* 15 max line items per order
+	* 100 customers per distribution station
+	* 1,000 items
+	* 1,000 stock listings per warehouse
+	* 50 max orders
+	* 10 max line items per order
 
 The constructor then enters a menu loop which contains the database functions required for
 milestone 2. The menu includes an option to reinitialize the database, after which the database is recreated with randomly generated data. 
