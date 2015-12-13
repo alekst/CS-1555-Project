@@ -1095,8 +1095,8 @@ public class DBLoader
 			updateYTDSalesStation.executeBatch();
             
 
-            System.out.println("Here is the post-payment account status:");
-            showAccountStatus(warehouse_id, station_id, customer_id);
+ //           System.out.println("Here is the post-payment account status:");
+//            showAccountStatus(warehouse_id, station_id, customer_id);
             // commit the transaction
             con.commit();
 			
@@ -2000,5 +2000,3 @@ public class DBLoader
     }
 
 }
-=======
->>>>>>> External Changes
