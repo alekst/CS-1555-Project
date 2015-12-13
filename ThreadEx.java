@@ -86,6 +86,9 @@ public class ThreadEx extends Thread
 		
 		int newId = m_myId % 5;
 
+		while (!getGreenLight())
+			yield();
+
 	    switch (newId)
 	    {
 	    	case 0:	//System.out.println("Creating order");

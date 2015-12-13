@@ -1,3 +1,33 @@
+/******************************
+* Results.txt
+*
+* Aleks Tapinsh
+* alt99@pitt.edu
+* Clint Wadley
+* cvw5@pitt.edu
+*
+* 12/12/15
+* CS1555
+* Term Project
+*
+* Timing results from running ThreadEx.java
+* Fulfillment of Milestone 3
+*/
+
+The ThreadEx program spawns three threads of each type of query, for a total of
+fifteen threads. A timing loop was embedded within the ThreadEx class which
+timed the execution of these threads.
+
+The ThreadEx program was run ten times by both Aleks and Clint. The resulting times
+are much longer than were anticipated. Upon further research, it seems that the 
+JDBC ResultSet objects used to get results from the database are quite overhead-heavy,
+and dependent upon network latency. Since many ResultSet objects are used within the
+queries, this is likely the cause for the delay. This hypothesis is also supported by
+the discrepancy between Aleks' and Clint's runtimes, since the hardware used to run
+the program was nearly identical in both cases, but different connections were used, 
+which had differing network latencies.
+
+Aleks' runs:
 38.979362371 sec
 42.053118793 sec
 39.686901366 sec
@@ -10,3 +40,19 @@
 47.946146877 sec
 
 average: 40.01669788 sec
+
+
+Clint's runs:
+13.494854 sec
+17.278577 sec
+18.513012 sec
+16.571266 sec
+18.90032  sec
+18.079227 sec
+16.553194 sec
+19.041858 sec
+20.015652 sec
+21.073791 sec
+
+average: 17.952175 sec
+
