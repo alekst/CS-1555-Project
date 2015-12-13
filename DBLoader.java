@@ -967,7 +967,7 @@ public class DBLoader
 
             // set up the transaction
             save = con.setSavepoint();
-            statement = con.createStatement();
+            //statement = con.createStatement();
             con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             //statement.executeUpdate("SET TRANSACTION READ WRITE");
 
@@ -977,10 +977,10 @@ public class DBLoader
             addLineItem.executeBatch();
 
             // commit the transaction
-            statement.executeUpdate("COMMIT");
+            con.commit();
             addOrder.close();
             addLineItem.close();
-            statement.close();
+            //statement.close();
 
             enqueueOrder(warehouse, station, customer, thisOrderID);
 
@@ -1209,17 +1209,17 @@ public class DBLoader
 		preparedStatement.setInt(2, station_id);
 		preparedStatement.setInt(3, customer_id);
 		preparedStatement.setInt(4, order_id);
-		resultSet = preparedStatement.executeQuery();
+		ResultSet detailsSet = preparedStatement.executeQuery();
 		System.out.println("Item number \t Quantity \t Amount Due \t Delivery Date\t ");
 		System.out.println("---------- \t --------- \t -----------\t -------------\t ");
-		while (resultSet.next())
+		while (detailsSet.next())
 		{
-			System.out.print("" + resultSet.getInt(1));
-			System.out.print("\t\t " + resultSet.getInt(2));
-			System.out.print("\t\t" + cf.format(resultSet.getBigDecimal(3)));
-			System.out.println("\t\t" + resultSet.getString(4));
+			System.out.print("" + detailsSet.getInt(1));
+			System.out.print("\t\t " + detailsSet.getInt(2));
+			System.out.print("\t\t" + cf.format(detailsSet.getBigDecimal(3)));
+			System.out.println("\t\t" + detailsSet.getString(4));
 		}
-		resultSet.close();
+		detailsSet.close();
 	}
 	/**
 	* A helper method. Used in getOrderStatus() method
