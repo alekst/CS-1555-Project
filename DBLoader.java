@@ -1159,7 +1159,7 @@ public class DBLoader
 		{
             // set transaction and execute
             save = con.setSavepoint();
-            con.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+            con.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             // Statement stmt = con.createStatement();
  //            stmt.executeUpdate("SET TRANSACTION READ ONLY");
 			//System.out.println("Getting order status for " + customer_id + " from the station " + station_id + "of the warehouse " + warehouse_id); //mostly for debugging purposes	
