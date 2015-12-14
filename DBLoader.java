@@ -6,7 +6,7 @@
 * Clint Wadley
 * cvw5@pitt.edu
 *
-* 12/6/15
+* 12/14/15
 * CS1555
 * Term Project
 *
@@ -23,11 +23,13 @@ import java.io.IOError;
 import java.io.Console;
 import java.util.Random;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.Locale;
+import java.util.Vector;
 
 public class DBLoader
 {
@@ -49,11 +51,11 @@ public class DBLoader
     private final int NAME_MAX = 15;
     private final int MAX_SOLD = 15000;
     private final int MAX_PRICE = 50;
-    private HashMap<Integer, Float> itemCost;
+    private ConcurrentHashMap<Integer, Float> itemCost;
     private int currWarehouseID, currStationID, currCustomerID;
-    private HashMap<String, Integer> currOrderID, currLineID;
-    private String[][][] last20Orders;
-    private int[][] last20Index;
+    private ConcurrentHashMap<String, Integer> currOrderID, currLineID;
+    private Vector<String[][]> last20Orders;
+    private Vector<int[]> last20Index;
 	
 	Locale currentLocale = Locale.getDefault();
 	NumberFormat cf = NumberFormat.getCurrencyInstance(currentLocale); //currency formatter
@@ -87,7 +89,20 @@ public class DBLoader
     */
     public DBLoader(DBLoader loader)
     {
-        this.con = loader.getConnection();
+        this.server = loader.server;
+        this.username = loader.username;
+        this.password = loader.password;
+
+        try
+        {
+            this.con = openConnection();
+            this.con.setAutoCommit(false);
+        }
+        catch (SQLException e)
+        {
+            System.out.println("Error setting up connection.");
+        }
+
         this.itemCost = loader.getItemCost();
         this.currOrderID = loader.getCurrOrderID();
         this.currLineID = loader.getCurrLineID();
@@ -102,8 +117,8 @@ public class DBLoader
     */
 	public DBLoader(boolean askForParameters)
     {
-        currOrderID = new HashMap<String, Integer>();
-        currLineID = new HashMap<String, Integer>();
+        currOrderID = new ConcurrentHashMap<String, Integer>();
+        currLineID = new ConcurrentHashMap<String, Integer>();
         
 
         scan = new Scanner(System.in);
@@ -217,14 +232,14 @@ public class DBLoader
             System.out.println("Using default values to populate database.");
         }
 
-        last20Orders = new String[WAREHOUSES][STATIONS_PER_WAREHOUSE][20];
-        last20Index = new int[WAREHOUSES][STATIONS_PER_WAREHOUSE];
+        last20Orders = new Vector<String[][]>();
+        last20Index = new Vector<int[]>();
 
-        for (int i = 0; i < last20Index.length; i++)
-        {
-            for (int j = 0; j < last20Index[i].length; j++)
-                last20Index[i][j] = 0;
-        }
+        // for (int i = 0; i < last20Index.size(); i++)
+        // {
+        //     for (int j = 0; j < last20Index.get(i).length; j++)
+        //         last20Index.get(i)[j] = 0;
+        // }
 
         // initialize the database
 		initDatabase();
@@ -653,7 +668,7 @@ public class DBLoader
         // this enables us to update the counts without querying the database
         HashMap<Integer, Integer> ytdSoldCounts = new HashMap<Integer, Integer>(ITEMS);
         HashMap<Integer, Integer> itemOrderCounts = new HashMap<Integer, Integer>(ITEMS);
-        itemCost = new HashMap<Integer, Float>(ITEMS);
+        itemCost = new ConcurrentHashMap<Integer, Float>(ITEMS);
         try
         {
             // generate the items
@@ -696,6 +711,8 @@ public class DBLoader
                 {
                     stationTotal = 0;
                     double taxRate = getRandomTax(rand);
+                    last20Orders.add(currStationID - 1, new String[STATIONS_PER_WAREHOUSE][20]);
+                    last20Index.add(currStationID - 1, new int[STATIONS_PER_WAREHOUSE]);
 
                     // generate the customers
                     for (currCustomerID = 1; currCustomerID <= CUSTOMERS_PER_STATION; currCustomerID++)
@@ -1189,6 +1206,7 @@ public class DBLoader
             catch (SQLException f)
             {}
 				System.out.println("Error in order status is: " + e.toString());
+                e.printStackTrace();
             System.out.println("\n--------------------------------------------------------");
 			System.out.println("Error getting the order status. Transaction rolled back.");
             System.out.println("--------------------------------------------------------\n");
@@ -1209,17 +1227,17 @@ public class DBLoader
 		preparedStatement.setInt(2, station_id);
 		preparedStatement.setInt(3, customer_id);
 		preparedStatement.setInt(4, order_id);
-		resultSet = preparedStatement.executeQuery();
+		ResultSet detailsResultSet = preparedStatement.executeQuery();
 		System.out.println("Item number \t Quantity \t Amount Due \t Delivery Date\t ");
 		System.out.println("---------- \t --------- \t -----------\t -------------\t ");
-		while (resultSet.next())
+		while (detailsResultSet.next())
 		{
-			System.out.print("" + resultSet.getInt(1));
-			System.out.print("\t\t " + resultSet.getInt(2));
-			System.out.print("\t\t" + cf.format(resultSet.getBigDecimal(3)));
-			System.out.println("\t\t" + resultSet.getString(4));
+			System.out.print("" + detailsResultSet.getInt(1));
+			System.out.print("\t\t " + detailsResultSet.getInt(2));
+			System.out.print("\t\t" + cf.format(detailsResultSet.getBigDecimal(3)));
+			System.out.println("\t\t" + detailsResultSet.getString(4));
 		}
-		resultSet.close();
+		detailsResultSet.close();
 	}
 	/**
 	* A helper method. Used in getOrderStatus() method
@@ -1937,8 +1955,8 @@ public class DBLoader
     */
     private void enqueueOrder(int warehouse, int station, int customer, int order)
     {
-        last20Orders[warehouse - 1][station - 1][last20Index[warehouse - 1][station - 1]] = getOrderKey(warehouse, station, customer, order);
-        last20Index[warehouse - 1][station - 1] = (last20Index[warehouse - 1][station - 1] + 1) % last20Orders[warehouse - 1][station - 1].length;
+        last20Orders.get(warehouse - 1)[station - 1][last20Index.get(warehouse - 1)[station - 1]] = getOrderKey(warehouse, station, customer, order);
+        last20Index.get(warehouse - 1)[station - 1] = (last20Index.get(warehouse - 1)[station - 1] + 1) % last20Orders.get(warehouse - 1)[station - 1].length;
     }
 
     /**
@@ -1974,27 +1992,27 @@ public class DBLoader
         return con;
     }
 
-    public HashMap<Integer, Float> getItemCost()
+    public ConcurrentHashMap<Integer, Float> getItemCost()
     {
         return itemCost;
     }
 
-    public HashMap<String, Integer> getCurrOrderID()
+    public ConcurrentHashMap<String, Integer> getCurrOrderID()
     {
         return currOrderID;
     }
 
-    public HashMap<String, Integer> getCurrLineID()
+    public ConcurrentHashMap<String, Integer> getCurrLineID()
     {
         return currLineID;
     }
 
-    public String[][][] getLast20Orders()
+    public Vector<String[][]> getLast20Orders()
     {
         return last20Orders;
     }
 
-    public int[][] getLast20Index()
+    public Vector<int[]> getLast20Index()
     {
         return last20Index;
     }

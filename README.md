@@ -1,4 +1,5 @@
 # Project for CS 1555
+# Milestone 2
 
 DBLoader.java loads and randomly populates the database with data. 
 
@@ -20,8 +21,24 @@ randomly generated data. The preference's default setting is established in the 
 	* 10 max line items per order
 
 The constructor then enters a menu loop which contains the database functions required for
-milestone 2. The menu includes an option to reinitialize the database, after which the database is recreated with randomly generated data. 
+milestone 2. The menu includes an option to reinitialize the database, after which the database
+is recreated with randomly generated data. 
 
 Separate methods are used to implement the functionality of the database initialization
 and query functions. These methods are grouped into two blocks, with a third block containing
 various helper methods for these functions.
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+# Milestone 3
+
+The ThreadEx class implements a multi-threaded program which instantiates a DBLoader object,
+thereby loading the database with generated data, and then spawning 15 threads, three of each
+of the five types of queries that the DBLoader object offers.
+
+These threads are run concurrently, testing the ability of the database to cope with multiple
+conflicting queries.
+
+A basic timing loop was inserted around the query code, and the total execution time of all
+15 threads is reported at the end of execution.
+
+Run the application as: java ThreadEx

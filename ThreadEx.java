@@ -1,3 +1,20 @@
+/******************************
+* ThreadEx.java
+*
+* Aleks Tapinsh
+* alt99@pitt.edu
+* Clint Wadley
+* cvw5@pitt.edu
+*
+* 12/14/15
+* CS1555
+* Term Project
+*
+* Program using the DBLoader class to perform timed, concurrent queries
+* to the database using threading.
+*/
+
+
 import java.sql.*;
 import java.math.*;
 import oracle.jdbc.OracleStatement;

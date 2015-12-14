@@ -6,7 +6,7 @@
 * Clint Wadley
 * cvw5@pitt.edu
 *
-* 12/12/15
+* 12/14/15
 * CS1555
 * Term Project
 *
@@ -23,11 +23,10 @@ are much longer than were anticipated. Upon further research, it seems that the
 JDBC ResultSet objects used to get results from the database are quite overhead-heavy,
 and dependent upon network latency. Since many ResultSet objects are used within the
 queries, this is likely the cause for the delay. This hypothesis is also supported by
-the discrepancy between Aleks' and Clint's runtimes, since the hardware used to run
-the program was nearly identical in both cases, but different connections were used, 
-which had differing network latencies.
+the discrepancy between Aleks' and Clint's runtimes, as well as the on and off-campus
+runtimes. These differing network latencies had a profound effect upon the results.
 
-Aleks' runs:
+Aleks' off-campus runs:
 38.979362371 sec
 42.053118793 sec
 39.686901366 sec
@@ -42,7 +41,7 @@ Aleks' runs:
 average: 40.01669788 sec
 
 
-Clint's runs:
+Clint's off-campus runs:
 13.494854 sec
 17.278577 sec
 18.513012 sec
@@ -55,4 +54,19 @@ Clint's runs:
 21.073791 sec
 
 average: 17.952175 sec
+
+
+Clint's on-campus runs:
+1.909678 sec
+3.820612 sec
+1.741322 sec
+1.718665 sec
+2.341781 sec
+2.812966 sec
+3.822991 sec
+2.041552 sec
+1.82784  sec
+1.665009 sec
+
+average: 2.3702416 sec
 
